@@ -92,10 +92,13 @@ class MarkdownParser:
                 # This is heading content
                 heading_text = token.content
 
+                # First h1 becomes title, all others (h2+) become sections
+                # If no h1 exists, h2+ become sections directly
                 if current_level == 1 and title is None:
                     title = heading_text
                     current_heading = None  # H1 is title, not a section
                 else:
+                    # h2, h3, etc. are always sections
                     current_heading = heading_text
 
             elif token.type == "heading_close":

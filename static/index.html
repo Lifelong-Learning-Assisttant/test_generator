@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Test Generator</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        header h1 { font-size: 2.5em; margin-bottom: 10px; }
+        header p { opacity: 0.9; }
+        .tabs {
+            display: flex;
+            background: #f5f5f5;
+            border-bottom: 2px solid #ddd;
+        }
+        .tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        .tab.active {
+            background: white;
+            border-bottom: 3px solid #667eea;
+            font-weight: bold;
+        }
+        .tab-content {
+            display: none;
+            padding: 30px;
+        }
+        .tab-content.active { display: block; }
+        .upload-zone {
+            border: 3px dashed #667eea;
+            border-radius: 12px;
+            padding: 60px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .upload-zone:hover {
+            background: #f0f4ff;
+            border-color: #764ba2;
+        }
+        .upload-zone input[type="file"] { display: none; }
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+            transition: transform 0.2s;
+        }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(102,126,234,0.4); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .file-list, .exam-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            transition: all 0.3s;
+        }
+        .card:hover { box-shadow: 0 5px 15px rgba(0,0,0,0.1); transform: translateY(-3px); }
+        .card h3 { color: #667eea; margin-bottom: 10px; }
+        .card p { color: #666; font-size: 14px; margin: 5px 0; }
+        .question {
+            background: #f9f9f9;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 6px;
+        }
+        .question h4 { margin-bottom: 15px; color: #333; }
+        .option {
+            padding: 12px;
+            margin: 8px 0;
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .option:hover { border-color: #667eea; background: #f0f4ff; }
+        .option input[type="checkbox"], .option input[type="radio"] {
+            margin-right: 10px;
+        }
+        .result {
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            font-size: 18px;
+        }
+        .result.success { background: #d4edda; color: #155724; border: 2px solid #c3e6cb; }
+        .result.error { background: #f8d7da; color: #721c24; border: 2px solid #f5c6cb; }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 18px;
+            color: #667eea;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎓 LLM Test Generator</h1>
+            <p>Generate and take AI-powered exams from educational content</p>
+        </header>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('upload')">📤 Upload Files</button>
+            <button class="tab" onclick="switchTab('generate')">⚙️ Generate Exam</button>
+            <button class="tab" onclick="switchTab('exams')">📝 My Exams</button>
+            <button class="tab" onclick="switchTab('take')">✍️ Take Test</button>
+        </div>
+
+        <!-- Upload Tab -->
+        <div id="upload-tab" class="tab-content active">
+            <h2>Upload Markdown Files</h2>
+            <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+                <input type="file" id="fileInput" accept=".md" onchange="uploadFile(event)">
+                <p style="font-size: 3em;">📄</p>
+                <p style="font-size: 18px; margin: 10px 0;">Click to upload or drag & drop</p>
+                <p style="color: #666;">Only .md (Markdown) files accepted</p>
+            </div>
+            <div id="uploadResult"></div>
+            <h3 style="margin-top: 30px;">Uploaded Files</h3>
+            <div id="fileList" class="file-list"></div>
+        </div>
+
+        <!-- Generate Tab -->
+        <div id="generate-tab" class="tab-content">
+            <h2>Generate Exam</h2>
+            <div>
+                <label><strong>Select File:</strong></label>
+                <select id="fileSelect" style="width: 100%; padding: 10px; margin: 10px 0; border-radius: 6px; border: 1px solid #ddd;">
+                    <option value="">Choose a file...</option>
+                </select>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0;">
+                <div>
+                    <label><strong>Total Questions:</strong></label>
+                    <input type="number" id="totalQuestions" value="10" min="1" max="50"
+                           style="width: 100%; padding: 10px; margin: 5px 0; border-radius: 6px; border: 1px solid #ddd;">
+                </div>
+                <div>
+                    <label><strong>Difficulty:</strong></label>
+                    <select id="difficulty" style="width: 100%; padding: 10px; margin: 5px 0; border-radius: 6px; border: 1px solid #ddd;">
+                        <option value="mixed">Mixed</option>
+                        <option value="easy">Easy</option>
+                        <option value="medium">Medium</option>
+                        <option value="hard">Hard</option>
+                    </select>
+                </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <label><strong>Single Choice Ratio:</strong> <span id="singleRatioValue">70%</span></label>
+                    <input type="range" id="singleRatio" min="0" max="100" value="70"
+                           oninput="updateRatios()" style="width: 100%;">
+                </div>
+                <div>
+                    <label><strong>Multiple Choice Ratio:</strong> <span id="multipleRatioValue">30%</span></label>
+                    <input type="range" id="multipleRatio" min="0" max="100" value="30"
+                           oninput="updateRatios()" style="width: 100%;">
+                </div>
+            </div>
+            <button class="btn" onclick="generateExam()">🚀 Generate Exam</button>
+            <div id="generateResult"></div>
+        </div>
+
+        <!-- Exams Tab -->
+        <div id="exams-tab" class="tab-content">
+            <h2>Generated Exams</h2>
+            <button class="btn" onclick="loadExams()">🔄 Refresh List</button>
+            <div id="examList" class="exam-list"></div>
+        </div>
+
+        <!-- Take Test Tab -->
+        <div id="take-tab" class="tab-content">
+            <h2>Take Test</h2>
+            <div>
+                <label><strong>Select Exam:</strong></label>
+                <select id="examSelect" style="width: 100%; padding: 10px; margin: 10px 0; border-radius: 6px; border: 1px solid #ddd;">
+                    <option value="">Choose an exam...</option>
+                </select>
+                <button class="btn" onclick="loadExamForTest()">📖 Load Exam</button>
+            </div>
+            <div id="testContent"></div>
+            <div id="testResult"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        let currentExam = null;
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+
+            if (tabName === 'upload') loadFiles();
+            if (tabName === 'generate') { loadFiles(); populateFileSelect(); }
+            if (tabName === 'exams') loadExams();
+            if (tabName === 'take') { loadExams(); populateExamSelect(); }
+        }
+
+        async function uploadFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const resultDiv = document.getElementById('uploadResult');
+            resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div>Uploading...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    resultDiv.innerHTML = `<div class="result success">✅ ${data.message}: ${data.filename}</div>`;
+                    loadFiles();
+                } else {
+                    resultDiv.innerHTML = `<div class="result error">❌ Error: ${data.detail}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        async function loadFiles() {
+            try {
+                const response = await fetch(`${API_BASE}/api/files`);
+                const data = await response.json();
+                const fileList = document.getElementById('fileList');
+
+                if (data.files.length === 0) {
+                    fileList.innerHTML = '<p style="text-align: center; color: #666;">No files uploaded yet</p>';
+                    return;
+                }
+
+                fileList.innerHTML = data.files.map(file => `
+                    <div class="card">
+                        <h3>📄 ${file.filename}</h3>
+                        <p>Size: ${(file.size / 1024).toFixed(2)} KB</p>
+                        <p>Modified: ${new Date(file.modified * 1000).toLocaleString()}</p>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading files:', error);
+            }
+        }
+
+        async function populateFileSelect() {
+            try {
+                const response = await fetch(`${API_BASE}/api/files`);
+                const data = await response.json();
+                const select = document.getElementById('fileSelect');
+
+                select.innerHTML = '<option value="">Choose a file...</option>' +
+                    data.files.map(file => `<option value="${file.filename}">${file.filename}</option>`).join('');
+            } catch (error) {
+                console.error('Error loading files:', error);
+            }
+        }
+
+        function updateRatios() {
+            const single = parseInt(document.getElementById('singleRatio').value);
+            const multiple = 100 - single;
+
+            document.getElementById('singleRatio').value = single;
+            document.getElementById('multipleRatio').value = multiple;
+            document.getElementById('singleRatioValue').textContent = single + '%';
+            document.getElementById('multipleRatioValue').textContent = multiple + '%';
+        }
+
+        async function generateExam() {
+            const filename = document.getElementById('fileSelect').value;
+            if (!filename) {
+                alert('Please select a file first');
+                return;
+            }
+
+            const resultDiv = document.getElementById('generateResult');
+            resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div>Generating exam with AI...</div>';
+
+            try {
+                // Get file content
+                const fileResp = await fetch(`${API_BASE}/api/files/${filename}`);
+                const fileData = await fileResp.json();
+
+                const totalQuestions = parseInt(document.getElementById('totalQuestions').value);
+                const single = parseInt(document.getElementById('singleRatio').value) / 100;
+                const multiple = 1 - single;
+
+                const requestData = {
+                    markdown_content: fileData.content,
+                    config: {
+                        total_questions: totalQuestions,
+                        single_choice_ratio: single,
+                        multiple_choice_ratio: multiple,
+                        difficulty: document.getElementById('difficulty').value
+                    }
+                };
+
+                const response = await fetch(`${API_BASE}/api/generate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestData)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="result success">
+                            ✅ Exam generated successfully!<br>
+                            Exam ID: <strong>${data.exam_id}</strong><br>
+                            Questions: ${data.questions.length}
+                        </div>
+                    `;
+                    loadExams();
+                } else {
+                    resultDiv.innerHTML = `<div class="result error">❌ Error: ${data.detail}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        async function loadExams() {
+            try {
+                const response = await fetch(`${API_BASE}/api/exams`);
+                const data = await response.json();
+                const examList = document.getElementById('examList');
+
+                if (data.exams.length === 0) {
+                    examList.innerHTML = '<p style="text-align: center; color: #666;">No exams generated yet</p>';
+                    return;
+                }
+
+                examList.innerHTML = data.exams.map(exam => `
+                    <div class="card">
+                        <h3>📝 ${exam.exam_id}</h3>
+                        <p>Created: ${new Date(exam.created * 1000).toLocaleString()}</p>
+                        <p>Size: ${(exam.size / 1024).toFixed(2)} KB</p>
+                        <button class="btn" onclick="viewExam('${exam.exam_id}')" style="width: 100%; margin-top: 10px;">
+                            👁️ View Details
+                        </button>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading exams:', error);
+            }
+        }
+
+        async function populateExamSelect() {
+            try {
+                const response = await fetch(`${API_BASE}/api/exams`);
+                const data = await response.json();
+                const select = document.getElementById('examSelect');
+
+                select.innerHTML = '<option value="">Choose an exam...</option>' +
+                    data.exams.map(exam => `<option value="${exam.exam_id}">${exam.exam_id} (${new Date(exam.created * 1000).toLocaleDateString()})</option>`).join('');
+            } catch (error) {
+                console.error('Error loading exams:', error);
+            }
+        }
+
+        async function viewExam(examId) {
+            try {
+                const response = await fetch(`${API_BASE}/api/exams/${examId}`);
+                const exam = await response.json();
+
+                const details = `
+                    <h3>Exam: ${exam.exam_id}</h3>
+                    <p><strong>Total Questions:</strong> ${exam.questions.length}</p>
+                    <p><strong>Single Choice:</strong> ${exam.questions.filter(q => q.type === 'single_choice').length}</p>
+                    <p><strong>Multiple Choice:</strong> ${exam.questions.filter(q => q.type === 'multiple_choice').length}</p>
+                    <div style="margin-top: 20px;">
+                        ${exam.questions.map((q, i) => `
+                            <div class="question">
+                                <h4>Question ${i + 1} (${q.type.replace('_', ' ')})</h4>
+                                <p>${q.stem}</p>
+                                <ul>
+                                    ${q.options.map((opt, j) => `
+                                        <li>${opt} ${q.correct.includes(j) ? '✅' : ''}</li>
+                                    `).join('')}
+                                </ul>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+
+                const examList = document.getElementById('examList');
+                examList.innerHTML = details + '<br><button class="btn" onclick="loadExams()">← Back to List</button>';
+            } catch (error) {
+                alert('Error loading exam: ' + error.message);
+            }
+        }
+
+        async function loadExamForTest() {
+            const examId = document.getElementById('examSelect').value;
+            if (!examId) {
+                alert('Please select an exam first');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/exams/${examId}`);
+                currentExam = await response.json();
+
+                const testContent = document.getElementById('testContent');
+                testContent.innerHTML = `
+                    <h3 style="margin: 20px 0;">Exam: ${currentExam.exam_id}</h3>
+                    <p style="margin-bottom: 20px;"><strong>Total Questions:</strong> ${currentExam.questions.length}</p>
+                    <form id="testForm">
+                        ${currentExam.questions.map((q, i) => `
+                            <div class="question">
+                                <h4>Question ${i + 1}</h4>
+                                <p><strong>${q.stem}</strong></p>
+                                ${q.options.map((opt, j) => `
+                                    <label class="option">
+                                        <input type="${q.type === 'single_choice' ? 'radio' : 'checkbox'}"
+                                               name="q${i}" value="${j}">
+                                        ${opt}
+                                    </label>
+                                `).join('')}
+                            </div>
+                        `).join('')}
+                        <button type="submit" class="btn" style="width: 100%; padding: 15px; font-size: 18px;">
+                            ✅ Submit Answers
+                        </button>
+                    </form>
+                `;
+
+                document.getElementById('testForm').onsubmit = submitTest;
+            } catch (error) {
+                alert('Error loading exam: ' + error.message);
+            }
+        }
+
+        async function submitTest(event) {
+            event.preventDefault();
+
+            const answers = [];
+            currentExam.questions.forEach((q, i) => {
+                const inputs = document.querySelectorAll(`input[name="q${i}"]:checked`);
+                const choice = Array.from(inputs).map(inp => parseInt(inp.value));
+
+                if (choice.length > 0) {
+                    answers.push({
+                        question_id: q.id,
+                        choice: choice
+                    });
+                }
+            });
+
+            const resultDiv = document.getElementById('testResult');
+            resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div>Grading your answers...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/grade`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        exam_id: currentExam.exam_id,
+                        answers: answers
+                    })
+                });
+
+                const result = await response.json();
+
+                resultDiv.innerHTML = `
+                    <div class="result success">
+                        <h2>🎉 Results</h2>
+                        <p style="font-size: 24px; margin: 20px 0;">
+                            Score: <strong>${result.summary.score_percent.toFixed(1)}%</strong>
+                        </p>
+                        <p>Correct: ${result.summary.correct} / ${result.summary.total}</p>
+                        <div style="margin-top: 20px;">
+                            ${result.per_question.map((r, i) => `
+                                <p>
+                                    Question ${i + 1}:
+                                    ${r.is_correct ? '✅ Correct' : '❌ Incorrect'}
+                                    ${r.partial_credit < 1 && r.partial_credit > 0 ? `(${(r.partial_credit * 100).toFixed(0)}% credit)` : ''}
+                                </p>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+
+                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        // Load files on page load
+        window.onload = () => {
+            loadFiles();
+            updateRatios();
+        };
+    </script>
+</body>
+</html>
