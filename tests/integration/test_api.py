@@ -153,15 +153,54 @@ class TestGradeEndpoint:
 class TestGenerateEndpoint:
     """Tests for generate endpoint."""
 
-    def test_generate_returns_not_implemented(self):
-        """Test that generate endpoint returns 501 (not implemented yet)."""
+    def test_generate_returns_exam(self):
+        """Test that generate endpoint creates an exam."""
         request_data = {
-            "markdown_content": "# Test\nSome content"
+            "markdown_content": """# Medical Topic
+
+## Symptoms
+Fever is a common symptom. Temperature above 38°C indicates fever.
+Cough can be dry or productive. Headache may accompany fever.
+
+## Treatment
+Paracetamol 500mg every 6 hours for fever reduction.
+Rest and hydration are important for recovery.
+""",
+            "config": {
+                "total_questions": 3,
+                "single_choice_ratio": 0.7,
+                "multiple_choice_ratio": 0.3
+            }
         }
 
         response = client.post("/api/generate", json=request_data)
-        # Should return 501 until generator is implemented
-        assert response.status_code == 501
+
+        # Should succeed with 200
+        assert response.status_code == 200
+
+        data = response.json()
+        assert "exam_id" in data
+        assert "questions" in data
+        assert len(data["questions"]) == 3
+
+        # Verify question structure
+        for question in data["questions"]:
+            assert "id" in question
+            assert "type" in question
+            assert "stem" in question
+            assert "options" in question
+            assert "correct" in question
+            assert len(question["options"]) >= 3
+
+    def test_generate_with_empty_content(self):
+        """Test that generate rejects empty markdown."""
+        request_data = {
+            "markdown_content": ""
+        }
+
+        response = client.post("/api/generate", json=request_data)
+        # Pydantic validation returns 422 for empty string
+        assert response.status_code == 422
 
 
 class TestOpenAPISchema:

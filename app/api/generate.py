@@ -7,12 +7,12 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from app.models.schemas import GenerateRequest, Exam, ExamConfig
 from app.config import settings
+from app.core.parser import MarkdownParser
+from app.core.generator import QuestionGenerator
 
 router = APIRouter()
-
-# TODO: Will be implemented with question generator
-# from app.core.generator import QuestionGenerator
-# generator = QuestionGenerator()
+parser = MarkdownParser()
+generator = QuestionGenerator()
 
 
 @router.post("/api/generate", response_model=Exam, tags=["generation"])
@@ -35,32 +35,38 @@ async def generate_exam(request: GenerateRequest):
     # Generate unique exam ID
     exam_id = f"ex-{uuid.uuid4().hex[:8]}"
 
-    # TODO: Replace with actual question generator
-    # For now, return placeholder to make API functional
-    raise HTTPException(
-        status_code=501,
-        detail="Question generator not yet implemented. Coming soon!"
-    )
+    try:
+        # Parse markdown content
+        document = parser.parse(request.markdown_content)
 
-    # Future implementation:
-    # try:
-    #     exam = generator.generate(
-    #         markdown_content=request.markdown_content,
-    #         config=config,
-    #         exam_id=exam_id
-    #     )
-    # except Exception as e:
-    #     raise HTTPException(
-    #         status_code=500,
-    #         detail=f"Generation failed: {str(e)}"
-    #     )
-    #
-    # # Save exam to file
-    # try:
-    #     exam_file = Path(settings.output_dir) / f"exam_{exam_id}.json"
-    #     with open(exam_file, 'w', encoding='utf-8') as f:
-    #         json.dump(exam.model_dump(), f, ensure_ascii=False, indent=2)
-    # except Exception as e:
-    #     print(f"Warning: Failed to save exam: {e}")
-    #
-    # return exam
+        # Generate exam
+        exam = generator.generate(
+            document=document,
+            config=config,
+            exam_id=exam_id
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid input: {str(e)}"
+        )
+    except RuntimeError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Generation failed: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Unexpected error: {str(e)}"
+        )
+
+    # Save exam to file
+    try:
+        exam_file = Path(settings.output_dir) / f"exam_{exam_id}.json"
+        with open(exam_file, 'w', encoding='utf-8') as f:
+            json.dump(exam.model_dump(), f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"Warning: Failed to save exam: {e}")
+
+    return exam
