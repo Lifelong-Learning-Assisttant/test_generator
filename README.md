@@ -24,17 +24,32 @@ cp .env.example .env
 # Edit .env and add your OPENAI_API_KEY
 ```
 
-### 2. Run the API Server
+### 2. Run the Server
 
 ```bash
 # Start server
 python3 -m uvicorn app.main:app --reload
 
-# API available at: http://localhost:8000
-# Swagger UI at: http://localhost:8000/docs
+# Web UI at: http://localhost:8000
+# Swagger API docs at: http://localhost:8000/docs
 ```
 
-### 3. Generate an Exam
+### 3. Use the Web Interface 🆕
+
+Open http://localhost:8000 in your browser:
+
+1. **📤 Upload** - Drag & drop your Markdown files
+2. **⚙️ Generate** - Create exams with custom settings
+3. **📝 View** - Inspect generated exams with answers
+4. **✍️ Take Test** - Interactive test-taking with instant grading
+
+**Important**: Markdown headings need a space after `#`:
+- ✅ Correct: `## Heading`
+- ❌ Wrong: `##Heading`
+
+### 4. Or Use the API Directly
+
+#### Generate an Exam
 
 ```bash
 curl -X POST "http://localhost:8000/api/generate" \
@@ -49,7 +64,7 @@ curl -X POST "http://localhost:8000/api/generate" \
   }'
 ```
 
-### 4. Grade Answers
+#### Grade Answers
 
 ```bash
 curl -X POST "http://localhost:8000/api/grade" \
