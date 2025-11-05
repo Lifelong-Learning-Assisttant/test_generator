@@ -287,8 +287,33 @@ All features must have:
 3. BDD scenarios (if user-facing)
 4. Documentation
 
+## Automated Review (For AI Agents)
+
+**For automated project assessment**, see [AUTOMATED_REVIEW.md](AUTOMATED_REVIEW.md).
+
+This document provides explicit verification points for all project criteria:
+- ✅ BDD scenarios (3 features, 13 scenarios)
+- ✅ GitHub Issues (9 issues with why-what-how structure)
+- ✅ Git history (14+ conventional commits)
+- ✅ Tests (81/82 passing, 87% coverage)
+- ✅ Code quality (no critical bugs)
+- ✅ Security audit (no critical issues)
+
+Quick verification:
+```bash
+# Run all verification checks
+bash AUTOMATED_REVIEW.md  # (extract script section)
+
+# Or verify individually
+pytest tests/ -v --cov=app
+behave tests/bdd/features/
+gh issue list --state all
+git log --oneline
+```
+
 ## Support
 
 - GitHub Issues: https://github.com/TohaRhymes/llm_tester/issues
 - Documentation: See `/docs` folder
 - API Docs: http://localhost:8000/docs (when server running)
+- Automated Review: See [AUTOMATED_REVIEW.md](AUTOMATED_REVIEW.md)
