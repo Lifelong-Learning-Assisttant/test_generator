@@ -168,7 +168,7 @@ Issues to fix:
 ```bash
 # Покрытие тестами
 pytest --cov=app --cov-report=term-missing tests/
-# 87% coverage, 81/82 tests passing
+# 80% coverage, 81/82 tests passing
 
 # Все модули покрыты
 - schemas: 96%
@@ -247,7 +247,7 @@ b3ad2d5 chore: initialize project structure
 **1. Test-Driven Development:**
 - RED → GREEN → REFACTOR цикл
 - Тесты как спецификация
-- 87% coverage - не случайность, а результат TDD
+- 80% coverage - не случайность, а результат TDD
 
 **2. Behavior-Driven Development:**
 - Gherkin scenarios - язык бизнеса и разработки
@@ -315,9 +315,9 @@ python3 -m uvicorn app.main:app --reload
 
 **Код:**
 - 16 Python модулей
-- 81/82 тестов (99%)
-- 87% coverage
-- 14 коммитов
+- 82 теста (81 passing, 99%)
+- 80% coverage
+- 16 коммитов (включая presentation + automated review)
 
 **GitHub:**
 - 9 issues (8 closed, 1 open)

@@ -6,7 +6,7 @@
 
 **Last Updated**: 2025-11-05
 **Test Status**: 81/82 passing (99%)
-**Coverage**: 87%
+**Coverage**: 80%
 **Issues**: 8/9 closed
 **Security**: No critical issues found
 
@@ -152,9 +152,9 @@ behave tests/bdd/features/      # BDD scenarios
   - `test_generator.py`: 18 tests (17 pass, 1 flaky*) ⚠️
 - **Integration Tests**: 11 tests ✅
   - `test_api.py`: 11 tests (API endpoints)
-- **BDD Scenarios**: 13 scenarios ✅
+- **BDD Scenarios**: 12 scenarios ✅
 - **Total**: 81/82 passing (99%)
-- **Coverage**: 87%
+- **Coverage**: 80%
 
 ### Known Issues
 **⚠️ 1 Flaky Test**: `test_multiple_choice_has_multiple_correct`
@@ -193,7 +193,7 @@ app/parser.py           98% ✅
 app/grader.py           96% ✅
 app/generator.py        82% ✅
 app/openai_client.py    86% ✅
-app/api/*               87% ✅
+app/api/*               74-87% ✅
 ```
 
 ### Code Quality Indicators
@@ -341,9 +341,9 @@ All dependencies are well-maintained:
 | Metric | Value | Status |
 |--------|-------|--------|
 | Tests Passing | 81/82 (99%) | ✅ |
-| Code Coverage | 87% | ✅ |
+| Code Coverage | 80% | ✅ |
 | GitHub Issues | 8/9 closed | ✅ |
-| BDD Scenarios | 13 scenarios | ✅ |
+| BDD Scenarios | 12 scenarios | ✅ |
 | Git Commits | 14+ commits | ✅ |
 | Security Issues | 0 critical | ✅ |
 | API Endpoints | 8 endpoints | ✅ |
@@ -404,7 +404,7 @@ echo -e "\n=== ALL CHECKS COMPLETE ==="
 - ✅ Issues documented with why-what-how
 - ✅ Git history sensible and progressive
 - ✅ Tests exist and 99% pass
-- ✅ Code quality high (87% coverage)
+- ✅ Code quality high (80% coverage)
 - ✅ No critical security issues
 
 **This project demonstrates:**

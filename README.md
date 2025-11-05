@@ -9,7 +9,7 @@ AI-powered test generation system for educational materials. Generates and grade
 - 🏥 **Medical Focus**: Optimized for medical education content
 - 🔍 **Source Traceability**: Every question links back to source material
 - 📊 **Configurable**: Control question counts, difficulty, and type ratios
-- 🧪 **Well-Tested**: 82 tests, 91% code coverage, full BDD scenarios
+- 🧪 **Well-Tested**: 82 tests (81 passing, 99%), 80% code coverage, 12 BDD scenarios
 
 ## Quick Start
 
@@ -292,10 +292,10 @@ All features must have:
 **For automated project assessment**, see [AUTOMATED_REVIEW.md](AUTOMATED_REVIEW.md).
 
 This document provides explicit verification points for all project criteria:
-- ✅ BDD scenarios (3 features, 13 scenarios)
+- ✅ BDD scenarios (3 features, 12 scenarios)
 - ✅ GitHub Issues (9 issues with why-what-how structure)
-- ✅ Git history (14+ conventional commits)
-- ✅ Tests (81/82 passing, 87% coverage)
+- ✅ Git history (16+ conventional commits)
+- ✅ Tests (81/82 passing, 80% coverage)
 - ✅ Code quality (no critical bugs)
 - ✅ Security audit (no critical issues)
 
