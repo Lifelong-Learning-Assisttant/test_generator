@@ -101,6 +101,32 @@ llm_tester/
 
 Full API documentation: http://localhost:8000/docs (when server is running)
 
+### Postman Collection
+
+Import the Postman collection for quick API testing:
+
+1. **Import**: `LLM_Test_Generator.postman_collection.json`
+2. **Configure**: Variables are pre-set (`base_url`, `exam_id`, `uploaded_filename`)
+3. **Run**: Execute requests in order for complete workflow
+
+**Collection includes:**
+- All 8 API endpoints with example requests
+- Automated tests for response validation
+- Environment variables auto-populated from responses
+- Pre-request scripts for dynamic data
+
+**Complete workflow test:**
+1. Health Check → verify API is running
+2. Upload File → upload sample medical content
+3. Generate Exam → create 5-question exam
+4. Get Exam → retrieve generated exam
+5. Grade Exam → evaluate sample answers
+
+All requests include automated tests that validate:
+- Response status codes
+- Response structure and required fields
+- Data types and constraints
+
 ## Testing
 
 ```bash

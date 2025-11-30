@@ -1,0 +1,378 @@
+{
+  "info": {
+    "name": "LLM Test Generator API",
+    "description": "Complete API collection for LLM Test Generator - generate and grade educational exams from Markdown content",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Response has status ok\", function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.status).to.eql(\"ok\");",
+              "});",
+              "",
+              "pm.test(\"Response has version\", function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.version).to.exist;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": ["{{base_url}}"],
+          "path": ["health"]
+        },
+        "description": "Check if the API is running and healthy"
+      },
+      "response": []
+    },
+    {
+      "name": "Upload Markdown File",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"File uploaded successfully\", function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.message).to.include(\"successfully\");",
+              "    pm.expect(jsonData.filename).to.exist;",
+              "});",
+              "",
+              "pm.test(\"Response contains file path\", function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.path).to.exist;",
+              "    pm.environment.set(\"uploaded_filename\", jsonData.filename);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file",
+              "src": "examples/sample_medical.md"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/api/upload",
+          "host": ["{{base_url}}"],
+          "path": ["api", "upload"]
+        },
+        "description": "Upload a Markdown file for exam generation"
+      },
+      "response": []
+    },
+    {
+      "name": "List Uploaded Files",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Response contains files array\", function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.files).to.be.an('array');",
+              "    pm.expect(jsonData.count).to.be.a('number');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/files",
+          "host": ["{{base_url}}"],
+          "path": ["api", "files"]
+        },
+        "description": "Get list of all uploaded Markdown files"
+      },
+      "response": []
+    },
+    {
+      "name": "Get File Content",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Response contains file content\", function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.content).to.exist;",
+              "    pm.expect(jsonData.filename).to.exist;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/files/{{uploaded_filename}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "files", "{{uploaded_filename}}"]
+        },
+        "description": "Get content of a specific uploaded file"
+      },
+      "response": []
+    },
+    {
+      "name": "Generate Exam",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Response contains exam_id\", function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.exam_id).to.exist;",
+              "    pm.environment.set(\"exam_id\", jsonData.exam_id);",
+              "});",
+              "",
+              "pm.test(\"Response contains questions\", function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.questions).to.be.an('array');",
+              "    pm.expect(jsonData.questions.length).to.be.greaterThan(0);",
+              "});",
+              "",
+              "pm.test(\"Questions have required fields\", function () {",
+              "    const jsonData = pm.response.json();",
+              "    const firstQuestion = jsonData.questions[0];",
+              "    pm.expect(firstQuestion.id).to.exist;",
+              "    pm.expect(firstQuestion.type).to.exist;",
+              "    pm.expect(firstQuestion.stem).to.exist;",
+              "    pm.expect(firstQuestion.options).to.be.an('array');",
+              "    pm.expect(firstQuestion.correct).to.be.an('array');",
+              "});",
+              "",
+              "pm.test(\"Config is included\", function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.config_used).to.exist;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"markdown_content\": \"# Гестационная гипертензия и преэклампсия\\n\\n## Определения\\n- **Гестационная гипертензия**: артериальное давление ≥140/90 мм рт. ст. после 20-й недели беременности без признаков протеинурии.\\n- **Преэклампсия**: гипертензия после 20-й недели в сочетании с протеинурией **или** признаками поражения органов-мишеней.\\n\\n## Факторы риска\\n- Первая беременность, многоплодие, ожирение (ИМТ ≥30), возраст матери <18 или >40, семейный анамнез преэклампсии, хроническая гипертензия.\\n\\n## Диагностика\\n- Измерение АД в покое в двух повторениях с интервалом ≥4 часа.\\n- Протеинурия: ≥300 мг/сут **или** отношение белок/креатинин мочи ≥0.3.\\n- Оценка органных проявлений: тромбоцитопения, повышение АЛТ/АСТ, головная боль, нарушения зрения, отёк лёгких.\\n\\n## Тактика ведения\\n- Мониторинг АД и симптомов, лабораторный контроль.\\n- Антигипертензивная терапия при АД ≥160/110.\\n- Рассмотрение родоразрешения при ухудшении состояния матери/плода или при сроке ≥37 недель.\",\n  \"config\": {\n    \"total_questions\": 5,\n    \"single_choice_ratio\": 0.6,\n    \"multiple_choice_ratio\": 0.4,\n    \"difficulty\": \"medium\",\n    \"seed\": 42\n  }\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/generate",
+          "host": ["{{base_url}}"],
+          "path": ["api", "generate"]
+        },
+        "description": "Generate an exam from Markdown content with custom configuration"
+      },
+      "response": []
+    },
+    {
+      "name": "List Exams",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Response contains exams array\", function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.exams).to.be.an('array');",
+              "    pm.expect(jsonData.count).to.be.a('number');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/exams",
+          "host": ["{{base_url}}"],
+          "path": ["api", "exams"]
+        },
+        "description": "Get list of all generated exams"
+      },
+      "response": []
+    },
+    {
+      "name": "Get Exam by ID",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Response is valid exam\", function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.exam_id).to.exist;",
+              "    pm.expect(jsonData.questions).to.be.an('array');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/exams/{{exam_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "exams", "{{exam_id}}"]
+        },
+        "description": "Get a specific exam by its ID"
+      },
+      "response": []
+    },
+    {
+      "name": "Grade Exam",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// This script generates sample answers for the exam",
+              "// In a real scenario, these would come from student input",
+              "console.log(\"Preparing sample answers for grading\");"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Response contains grading summary\", function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.summary).to.exist;",
+              "    pm.expect(jsonData.summary.total).to.be.a('number');",
+              "    pm.expect(jsonData.summary.correct).to.be.a('number');",
+              "    pm.expect(jsonData.summary.score_percent).to.be.a('number');",
+              "});",
+              "",
+              "pm.test(\"Response contains per-question results\", function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.per_question).to.be.an('array');",
+              "    pm.expect(jsonData.per_question.length).to.be.greaterThan(0);",
+              "});",
+              "",
+              "pm.test(\"Per-question results have required fields\", function () {",
+              "    const jsonData = pm.response.json();",
+              "    const firstResult = jsonData.per_question[0];",
+              "    pm.expect(firstResult.question_id).to.exist;",
+              "    pm.expect(firstResult.is_correct).to.be.a('boolean');",
+              "    pm.expect(firstResult.expected).to.be.an('array');",
+              "    pm.expect(firstResult.given).to.be.an('array');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"exam_id\": \"{{exam_id}}\",\n  \"answers\": [\n    {\n      \"question_id\": \"q-001\",\n      \"choice\": [0]\n    },\n    {\n      \"question_id\": \"q-002\",\n      \"choice\": [1]\n    },\n    {\n      \"question_id\": \"q-003\",\n      \"choice\": [2]\n    },\n    {\n      \"question_id\": \"q-004\",\n      \"choice\": [0, 2]\n    },\n    {\n      \"question_id\": \"q-005\",\n      \"choice\": [1, 3]\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/grade",
+          "host": ["{{base_url}}"],
+          "path": ["api", "grade"]
+        },
+        "description": "Grade student answers against the exam answer keys. Note: Update question_id values based on the actual exam generated."
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "exam_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "uploaded_filename",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
