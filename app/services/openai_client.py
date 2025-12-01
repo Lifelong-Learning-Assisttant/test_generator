@@ -5,6 +5,7 @@ import json
 from typing import Dict, Any
 from openai import OpenAI
 from app.config import settings
+from app.prompts import prompts_en, prompts_ru
 
 
 class OpenAIClient:
@@ -25,7 +26,8 @@ class OpenAIClient:
         self,
         content: str,
         question_type: str,
-        difficulty: str = "medium"
+        difficulty: str = "medium",
+        language: str = "en"
     ) -> Dict[str, Any]:
         """
         Generate a single question from content.
@@ -34,11 +36,16 @@ class OpenAIClient:
             content: Source content to generate question from
             question_type: "single_choice", "multiple_choice", or "open_ended"
             difficulty: "easy", "medium", or "hard"
+            language: "en" for English or "ru" for Russian
 
         Returns:
-            Dict with question data (stem, options, correct) or (stem, reference_answer, rubric)
+            Dict with question data (stem, options, correct, rubric) for all types
         """
-        prompt = self._build_prompt(content, question_type, difficulty)
+        prompt = self._build_prompt(content, question_type, difficulty, language)
+
+        # Get language-specific system message
+        prompts_module = prompts_ru if language == "ru" else prompts_en
+        system_message = prompts_module.SYSTEM_MESSAGE_RU if language == "ru" else prompts_module.SYSTEM_MESSAGE_EN
 
         try:
             response = self.client.chat.completions.create(
@@ -46,7 +53,7 @@ class OpenAIClient:
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are an expert medical educator creating educational test questions."
+                        "content": system_message
                     },
                     {
                         "role": "user",
@@ -65,7 +72,7 @@ class OpenAIClient:
                 if not all(k in result for k in ["stem", "reference_answer", "rubric"]):
                     raise ValueError("Invalid response from OpenAI: missing required fields for open_ended")
             else:
-                if not all(k in result for k in ["stem", "options", "correct"]):
+                if not all(k in result for k in ["stem", "options", "correct", "rubric"]):
                     raise ValueError("Invalid response from OpenAI: missing required fields for choice questions")
 
             return result
@@ -73,7 +80,7 @@ class OpenAIClient:
         except Exception as e:
             raise RuntimeError(f"Failed to generate question: {str(e)}")
 
-    def _build_prompt(self, content: str, question_type: str, difficulty: str) -> str:
+    def _build_prompt(self, content: str, question_type: str, difficulty: str, language: str) -> str:
         """
         Build prompt for question generation.
 
@@ -81,93 +88,41 @@ class OpenAIClient:
             content: Source content
             question_type: Type of question
             difficulty: Difficulty level
+            language: "en" or "ru"
 
         Returns:
             Formatted prompt string
         """
+        # Select correct prompt module based on language
+        prompts_module = prompts_ru if language == "ru" else prompts_en
+
         if question_type == "open_ended":
-            return self._build_open_ended_prompt(content, difficulty)
+            template = prompts_module.OPEN_ENDED_PROMPT_RU if language == "ru" else prompts_module.OPEN_ENDED_PROMPT_EN
+            return template.format(content=content, difficulty=difficulty)
 
+        # Choice questions (single or multiple)
         if question_type == "single_choice":
-            type_instruction = "Create a single-choice question with EXACTLY ONE correct answer."
-            correct_format = "The 'correct' field must be a list with exactly ONE index (e.g., [2])."
+            if language == "ru":
+                type_instruction = "Создайте вопрос с ОДНИМ правильным ответом."
+                correct_format = "Поле 'correct' должно содержать список с ОДНИМ индексом (например, [2])."
+            else:
+                type_instruction = "Create a single-choice question with EXACTLY ONE correct answer."
+                correct_format = "The 'correct' field must be a list with exactly ONE index (e.g., [2])."
         else:
-            type_instruction = "Create a multiple-choice question with 2-3 correct answers."
-            correct_format = "The 'correct' field must be a list with 2-3 indices (e.g., [1, 3])."
+            if language == "ru":
+                type_instruction = "Создайте вопрос с множественным выбором с 2-3 правильными ответами."
+                correct_format = "Поле 'correct' должно содержать список с 2-3 индексами (например, [1, 3])."
+            else:
+                type_instruction = "Create a multiple-choice question with 2-3 correct answers."
+                correct_format = "The 'correct' field must be a list with 2-3 indices (e.g., [1, 3])."
 
-        prompt = f"""Based on the following medical content, generate a {difficulty} difficulty test question.
-
-Content:
-{content}
-
-Requirements:
-- {type_instruction}
-- Provide 4-5 answer options
-- Options must be plausible but clearly distinguishable
-- Question must be answerable from the given content
-- Use clear, unambiguous language
-
-Return ONLY a JSON object with this exact structure:
-{{
-  "stem": "The question text here?",
-  "options": ["Option A", "Option B", "Option C", "Option D"],
-  "correct": [index_or_indices]
-}}
-
-Important:
-- {correct_format}
-- Indices are 0-based (first option is index 0)
-- Do NOT include any additional text, explanations, or markdown
-- Return ONLY valid JSON
-"""
-        return prompt
-
-    def _build_open_ended_prompt(self, content: str, difficulty: str) -> str:
-        """
-        Build prompt for open-ended question generation.
-
-        Args:
-            content: Source content
-            difficulty: Difficulty level
-
-        Returns:
-            Formatted prompt string
-        """
-        prompt = f"""Based on the following medical content, generate a {difficulty} difficulty open-ended question that requires a written text response.
-
-Content:
-{content}
-
-Requirements:
-- Create a question that tests deeper understanding (not just recall)
-- Question should require 2-4 sentences to answer properly
-- Provide a complete reference answer that demonstrates expected response
-- Create 3-5 specific rubric criteria for grading the answer
-
-Examples of good open-ended questions:
-- "Explain the pathophysiology of [condition] and describe the key diagnostic criteria."
-- "Compare and contrast [concept A] and [concept B], providing clinical examples."
-- "Describe the clinical approach to managing [scenario] and justify your reasoning."
-
-Return ONLY a JSON object with this exact structure:
-{{
-  "stem": "The open-ended question here?",
-  "reference_answer": "A complete answer demonstrating what students should write. Include all key points, clinical reasoning, and specific details from the source material.",
-  "rubric": [
-    "Clear criterion 1 (e.g., 'Mentions endothelial dysfunction in pathophysiology')",
-    "Clear criterion 2 (e.g., 'Lists at least 3 diagnostic criteria with specific values')",
-    "Clear criterion 3 (e.g., 'Explains mechanism linking placental ischemia to symptoms')"
-  ]
-}}
-
-Important:
-- Reference answer should be 2-4 sentences and comprehensive
-- Each rubric item must be specific and measurable
-- Rubric should cover all major points in the reference answer
-- Do NOT include any additional text, explanations, or markdown
-- Return ONLY valid JSON
-"""
-        return prompt
+        template = prompts_module.CHOICE_QUESTION_PROMPT_RU if language == "ru" else prompts_module.CHOICE_QUESTION_PROMPT_EN
+        return template.format(
+            content=content,
+            difficulty=difficulty,
+            type_instruction=type_instruction,
+            correct_format=correct_format
+        )
 
     def grade_open_ended(
         self,

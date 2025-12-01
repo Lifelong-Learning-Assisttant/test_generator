@@ -60,7 +60,8 @@ class QuestionGenerator:
                 document=document,
                 question_type="single_choice",
                 question_num=question_counter,
-                difficulty=config.difficulty
+                difficulty=config.difficulty,
+                config=config
             )
             questions.append(question)
             question_counter += 1
@@ -71,7 +72,8 @@ class QuestionGenerator:
                 document=document,
                 question_type="multiple_choice",
                 question_num=question_counter,
-                difficulty=config.difficulty
+                difficulty=config.difficulty,
+                config=config
             )
             questions.append(question)
             question_counter += 1
@@ -82,7 +84,8 @@ class QuestionGenerator:
                 document=document,
                 question_type="open_ended",
                 question_num=question_counter,
-                difficulty=config.difficulty
+                difficulty=config.difficulty,
+                config=config
             )
             questions.append(question)
             question_counter += 1
@@ -102,7 +105,8 @@ class QuestionGenerator:
         document: ParsedDocument,
         question_type: str,
         question_num: int,
-        difficulty: str
+        difficulty: str,
+        config: ExamConfig
     ) -> Question:
         """
         Generate a single question.
@@ -112,6 +116,7 @@ class QuestionGenerator:
             question_type: "single_choice", "multiple_choice", or "open_ended"
             question_num: Question number for ID
             difficulty: Difficulty level or "mixed"
+            config: Exam configuration for language and other settings
 
         Returns:
             Generated Question
@@ -125,12 +130,16 @@ class QuestionGenerator:
         else:
             actual_difficulty = difficulty
 
+        # Get language from config (defaulting to English)
+        language = getattr(config, 'language', 'en')
+
         # Generate question using OpenAI
         try:
             result = self.openai_client.generate_question(
                 content=section.content,
                 question_type=question_type,
-                difficulty=actual_difficulty
+                difficulty=actual_difficulty,
+                language=language
             )
 
             # Create source reference
@@ -158,7 +167,7 @@ class QuestionGenerator:
                     )
                 )
             else:
-                # Single or multiple choice
+                # Single or multiple choice - now includes rubric
                 question = Question(
                     id=f"q-{question_num + 1:03d}",
                     type=question_type,
@@ -166,7 +175,7 @@ class QuestionGenerator:
                     options=result["options"],
                     correct=result["correct"],
                     reference_answer=None,
-                    rubric=None,
+                    rubric=result.get("rubric"),  # Include rubric if provided
                     source_refs=[source_ref],
                     meta=QuestionMeta(
                         difficulty=actual_difficulty,

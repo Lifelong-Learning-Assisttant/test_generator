@@ -586,9 +586,9 @@
                                             placeholder="Type your answer here (2-4 sentences)..."
                                         ></textarea>
                                     ` : q.options.map((opt, j) => `
-                                        <label class="option" onclick="this.querySelector('input').checked = !this.querySelector('input').checked; updateOptionStyles();">
+                                        <label class="option" onclick="if (this.querySelector('input').type === 'checkbox') { this.querySelector('input').checked = !this.querySelector('input').checked; } updateOptionStyles();">
                                             <input type="${q.type === 'single_choice' ? 'radio' : 'checkbox'}"
-                                                   name="q${i}" value="${j}">
+                                                   name="q${i}" value="${j}" onchange="updateOptionStyles()">
                                             ${opt}
                                         </label>
                                     `).join('')}
