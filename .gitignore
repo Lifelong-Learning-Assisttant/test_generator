@@ -32,12 +32,17 @@ ENV/
 *.swp
 *.swo
 *~
+
+# data
 uploads/
+data/
+examples/data
 
 # Testing
 .pytest_cache/
 .coverage
 htmlcov/
+data/htmlcov/
 *.cover
 .hypothesis/
 
@@ -49,6 +54,8 @@ htmlcov/
 out/*.json
 out/*.csv
 !out/.gitkeep
+data/out/
+data/uploads/
 
 # OS
 .DS_Store

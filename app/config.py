@@ -2,7 +2,9 @@
 Application configuration management.
 """
 import os
+from pathlib import Path
 from pydantic_settings import BaseSettings
+from pydantic import model_validator
 
 
 class Settings(BaseSettings):
@@ -24,7 +26,29 @@ class Settings(BaseSettings):
     default_multiple_choice_ratio: float = 0.3
 
     # Output settings
-    output_dir: str = "out"
+    data_dir: str = "data"  # root for runtime artifacts
+    output_dir: str = "out"  # exams/grades; normalized under data_dir unless absolute
+    uploads_dir: str = "uploads"  # uploaded markdown; normalized under data_dir unless absolute
+
+    @model_validator(mode="after")
+    def _normalize_paths(self) -> 'Settings':
+        """Place output/uploads under data_dir when defaults are used."""
+        data_root = Path(self.data_dir)
+
+        # Normalize output_dir if default-like
+        output_path = Path(self.output_dir)
+        if output_path == Path("out"):
+            output_path = data_root / "out"
+
+        # Normalize uploads_dir if default-like
+        uploads_path = Path(self.uploads_dir)
+        if uploads_path == Path("uploads"):
+            uploads_path = data_root / "uploads"
+
+        self.output_dir = str(output_path)
+        self.uploads_dir = str(uploads_path)
+        self.data_dir = str(data_root)
+        return self
 
     class Config:
         env_file = ".env"

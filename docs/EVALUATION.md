@@ -45,7 +45,7 @@ Evaluating gpt-4o...
 Comparing models...
 
 Evaluation complete!
-Results saved to: out/evaluations/evaluation_20241201_120000.json
+Results saved to: data/out/evaluations/evaluation_20241201_120000.json
 
 Recommended model: gpt-4o-mini
 Reasoning: gpt-4o has highest quality, but gpt-4o-mini offers better value for cost

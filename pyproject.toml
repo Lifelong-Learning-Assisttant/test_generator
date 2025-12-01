@@ -32,7 +32,7 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "-v --cov=app --cov-report=html --cov-report=term-missing"
+addopts = "-v --cov=app --cov-report=html:data/htmlcov --cov-report=term-missing"
 asyncio_mode = "auto"
 filterwarnings = [
     "ignore::DeprecationWarning",
@@ -44,6 +44,9 @@ omit = [
     "*/tests/*",
     "*/__init__.py",
 ]
+
+[tool.coverage.html]
+directory = "data/htmlcov"
 
 [tool.coverage.report]
 exclude_lines = [

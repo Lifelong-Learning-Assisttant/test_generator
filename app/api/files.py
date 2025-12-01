@@ -11,8 +11,8 @@ from app.config import settings
 router = APIRouter()
 
 # Directory for uploaded files
-UPLOAD_DIR = Path("uploads")
-UPLOAD_DIR.mkdir(exist_ok=True)
+UPLOAD_DIR = Path(settings.uploads_dir)
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
 @router.post("/api/upload", tags=["files"])
