@@ -101,7 +101,21 @@
             margin: 15px 0;
             border-radius: 6px;
         }
+        .question.open-ended {
+            border-left-color: #f39c12;
+        }
         .question h4 { margin-bottom: 15px; color: #333; }
+        .question-type-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .badge-single { background: #3498db; color: white; }
+        .badge-multiple { background: #9b59b6; color: white; }
+        .badge-open { background: #f39c12; color: white; }
         .option {
             padding: 12px;
             margin: 8px 0;
@@ -110,10 +124,28 @@
             border-radius: 6px;
             cursor: pointer;
             transition: all 0.2s;
+            display: flex;
+            align-items: center;
         }
         .option:hover { border-color: #667eea; background: #f0f4ff; }
+        .option.selected { border-color: #667eea; background: #e8f0fe; }
         .option input[type="checkbox"], .option input[type="radio"] {
             margin-right: 10px;
+            cursor: pointer;
+        }
+        .text-answer {
+            width: 100%;
+            min-height: 120px;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+        }
+        .text-answer:focus {
+            outline: none;
+            border-color: #667eea;
         }
         .result {
             padding: 20px;
@@ -123,6 +155,17 @@
         }
         .result.success { background: #d4edda; color: #155724; border: 2px solid #c3e6cb; }
         .result.error { background: #f8d7da; color: #721c24; border: 2px solid #f5c6cb; }
+        .feedback-box {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .feedback-box h5 {
+            margin-bottom: 8px;
+            color: #856404;
+        }
         .loading {
             text-align: center;
             padding: 40px;
@@ -141,6 +184,14 @@
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
+        }
+        .ratio-control {
+            margin: 15px 0;
+        }
+        .ratio-control label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -197,18 +248,27 @@
                     </select>
                 </div>
             </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                <div>
-                    <label><strong>Single Choice Ratio:</strong> <span id="singleRatioValue">70%</span></label>
-                    <input type="range" id="singleRatio" min="0" max="100" value="70"
-                           oninput="updateRatios()" style="width: 100%;">
-                </div>
-                <div>
-                    <label><strong>Multiple Choice Ratio:</strong> <span id="multipleRatioValue">30%</span></label>
-                    <input type="range" id="multipleRatio" min="0" max="100" value="30"
-                           oninput="updateRatios()" style="width: 100%;">
-                </div>
+
+            <h3 style="margin: 20px 0;">Question Type Distribution</h3>
+            <div class="ratio-control">
+                <label>Single Choice Ratio: <span id="singleRatioValue">50%</span></label>
+                <input type="range" id="singleRatio" min="0" max="100" value="50"
+                       oninput="updateRatios()" style="width: 100%;">
             </div>
+            <div class="ratio-control">
+                <label>Multiple Choice Ratio: <span id="multipleRatioValue">30%</span></label>
+                <input type="range" id="multipleRatio" min="0" max="100" value="30"
+                       oninput="updateRatios()" style="width: 100%;">
+            </div>
+            <div class="ratio-control">
+                <label>Open-Ended Ratio: <span id="openRatioValue">20%</span></label>
+                <input type="range" id="openRatio" min="0" max="100" value="20"
+                       oninput="updateRatios()" style="width: 100%;">
+            </div>
+            <p style="color: #666; font-size: 14px; margin-top: 10px;">
+                ℹ️ Ratios will auto-adjust to sum to 100%
+            </p>
+
             <button class="btn" onclick="generateExam()">🚀 Generate Exam</button>
             <div id="generateResult"></div>
         </div>
@@ -317,12 +377,21 @@
 
         function updateRatios() {
             const single = parseInt(document.getElementById('singleRatio').value);
-            const multiple = 100 - single;
+            const multiple = parseInt(document.getElementById('multipleRatio').value);
+            const open = parseInt(document.getElementById('openRatio').value);
 
-            document.getElementById('singleRatio').value = single;
-            document.getElementById('multipleRatio').value = multiple;
-            document.getElementById('singleRatioValue').textContent = single + '%';
-            document.getElementById('multipleRatioValue').textContent = multiple + '%';
+            const total = single + multiple + open;
+
+            // Normalize to 100%
+            if (total > 0) {
+                const singleNorm = Math.round((single / total) * 100);
+                const multipleNorm = Math.round((multiple / total) * 100);
+                const openNorm = 100 - singleNorm - multipleNorm;
+
+                document.getElementById('singleRatioValue').textContent = singleNorm + '%';
+                document.getElementById('multipleRatioValue').textContent = multipleNorm + '%';
+                document.getElementById('openRatioValue').textContent = openNorm + '%';
+            }
         }
 
         async function generateExam() {
@@ -341,15 +410,23 @@
                 const fileData = await fileResp.json();
 
                 const totalQuestions = parseInt(document.getElementById('totalQuestions').value);
-                const single = parseInt(document.getElementById('singleRatio').value) / 100;
-                const multiple = 1 - single;
+                const single = parseInt(document.getElementById('singleRatio').value);
+                const multiple = parseInt(document.getElementById('multipleRatio').value);
+                const open = parseInt(document.getElementById('openRatio').value);
+                const total = single + multiple + open;
+
+                // Normalize ratios
+                const singleRatio = single / total;
+                const multipleRatio = multiple / total;
+                const openRatio = open / total;
 
                 const requestData = {
                     markdown_content: fileData.content,
                     config: {
                         total_questions: totalQuestions,
-                        single_choice_ratio: single,
-                        multiple_choice_ratio: multiple,
+                        single_choice_ratio: singleRatio,
+                        multiple_choice_ratio: multipleRatio,
+                        open_ended_ratio: openRatio,
                         difficulty: document.getElementById('difficulty').value
                     }
                 };
@@ -363,11 +440,16 @@
                 const data = await response.json();
 
                 if (response.ok) {
+                    const singleCount = data.questions.filter(q => q.type === 'single_choice').length;
+                    const multipleCount = data.questions.filter(q => q.type === 'multiple_choice').length;
+                    const openCount = data.questions.filter(q => q.type === 'open_ended').length;
+
                     resultDiv.innerHTML = `
                         <div class="result success">
                             ✅ Exam generated successfully!<br>
                             Exam ID: <strong>${data.exam_id}</strong><br>
-                            Questions: ${data.questions.length}
+                            Total Questions: ${data.questions.length}<br>
+                            Single Choice: ${singleCount} | Multiple Choice: ${multipleCount} | Open-Ended: ${openCount}
                         </div>
                     `;
                     loadExams();
@@ -423,23 +505,48 @@
                 const response = await fetch(`${API_BASE}/api/exams/${examId}`);
                 const exam = await response.json();
 
+                const singleCount = exam.questions.filter(q => q.type === 'single_choice').length;
+                const multipleCount = exam.questions.filter(q => q.type === 'multiple_choice').length;
+                const openCount = exam.questions.filter(q => q.type === 'open_ended').length;
+
                 const details = `
                     <h3>Exam: ${exam.exam_id}</h3>
                     <p><strong>Total Questions:</strong> ${exam.questions.length}</p>
-                    <p><strong>Single Choice:</strong> ${exam.questions.filter(q => q.type === 'single_choice').length}</p>
-                    <p><strong>Multiple Choice:</strong> ${exam.questions.filter(q => q.type === 'multiple_choice').length}</p>
+                    <p><strong>Single Choice:</strong> ${singleCount}</p>
+                    <p><strong>Multiple Choice:</strong> ${multipleCount}</p>
+                    <p><strong>Open-Ended:</strong> ${openCount}</p>
                     <div style="margin-top: 20px;">
-                        ${exam.questions.map((q, i) => `
-                            <div class="question">
-                                <h4>Question ${i + 1} (${q.type.replace('_', ' ')})</h4>
-                                <p>${q.stem}</p>
-                                <ul>
-                                    ${q.options.map((opt, j) => `
-                                        <li>${opt} ${q.correct.includes(j) ? '✅' : ''}</li>
-                                    `).join('')}
-                                </ul>
-                            </div>
-                        `).join('')}
+                        ${exam.questions.map((q, i) => {
+                            let badge = '';
+                            if (q.type === 'single_choice') badge = '<span class="question-type-badge badge-single">Single</span>';
+                            if (q.type === 'multiple_choice') badge = '<span class="question-type-badge badge-multiple">Multiple</span>';
+                            if (q.type === 'open_ended') badge = '<span class="question-type-badge badge-open">Open-Ended</span>';
+
+                            return `
+                                <div class="question ${q.type === 'open_ended' ? 'open-ended' : ''}">
+                                    <h4>Question ${i + 1} ${badge}</h4>
+                                    <p><strong>${q.stem}</strong></p>
+                                    ${q.type === 'open_ended' ? `
+                                        <div style="margin-top: 15px; padding: 15px; background: white; border-radius: 6px;">
+                                            <p><strong>Reference Answer:</strong></p>
+                                            <p style="color: #666;">${q.reference_answer}</p>
+                                            <p style="margin-top: 10px;"><strong>Rubric:</strong></p>
+                                            <ul>
+                                                ${q.rubric.map(r => `<li>${r}</li>`).join('')}
+                                            </ul>
+                                        </div>
+                                    ` : `
+                                        <ul style="margin-top: 10px;">
+                                            ${q.options.map((opt, j) => `
+                                                <li style="padding: 5px 0;">
+                                                    ${opt} ${q.correct.includes(j) ? '✅' : ''}
+                                                </li>
+                                            `).join('')}
+                                        </ul>
+                                    `}
+                                </div>
+                            `;
+                        }).join('')}
                     </div>
                 `;
 
@@ -466,19 +573,32 @@
                     <h3 style="margin: 20px 0;">Exam: ${currentExam.exam_id}</h3>
                     <p style="margin-bottom: 20px;"><strong>Total Questions:</strong> ${currentExam.questions.length}</p>
                     <form id="testForm">
-                        ${currentExam.questions.map((q, i) => `
-                            <div class="question">
-                                <h4>Question ${i + 1}</h4>
-                                <p><strong>${q.stem}</strong></p>
-                                ${q.options.map((opt, j) => `
-                                    <label class="option">
-                                        <input type="${q.type === 'single_choice' ? 'radio' : 'checkbox'}"
-                                               name="q${i}" value="${j}">
-                                        ${opt}
-                                    </label>
-                                `).join('')}
-                            </div>
-                        `).join('')}
+                        ${currentExam.questions.map((q, i) => {
+                            let badge = '';
+                            if (q.type === 'single_choice') badge = '<span class="question-type-badge badge-single">Single</span>';
+                            if (q.type === 'multiple_choice') badge = '<span class="question-type-badge badge-multiple">Multiple</span>';
+                            if (q.type === 'open_ended') badge = '<span class="question-type-badge badge-open">Open-Ended</span>';
+
+                            return `
+                                <div class="question ${q.type === 'open_ended' ? 'open-ended' : ''}">
+                                    <h4>Question ${i + 1} ${badge}</h4>
+                                    <p><strong>${q.stem}</strong></p>
+                                    ${q.type === 'open_ended' ? `
+                                        <textarea
+                                            class="text-answer"
+                                            id="answer-${i}"
+                                            placeholder="Type your answer here (2-4 sentences)..."
+                                        ></textarea>
+                                    ` : q.options.map((opt, j) => `
+                                        <label class="option" onclick="this.querySelector('input').checked = !this.querySelector('input').checked; updateOptionStyles();">
+                                            <input type="${q.type === 'single_choice' ? 'radio' : 'checkbox'}"
+                                                   name="q${i}" value="${j}">
+                                            ${opt}
+                                        </label>
+                                    `).join('')}
+                                </div>
+                            `;
+                        }).join('')}
                         <button type="submit" class="btn" style="width: 100%; padding: 15px; font-size: 18px;">
                             ✅ Submit Answers
                         </button>
@@ -491,24 +611,50 @@
             }
         }
 
+        function updateOptionStyles() {
+            document.querySelectorAll('.option').forEach(opt => {
+                const input = opt.querySelector('input');
+                if (input.checked) {
+                    opt.classList.add('selected');
+                } else {
+                    opt.classList.remove('selected');
+                }
+            });
+        }
+
         async function submitTest(event) {
             event.preventDefault();
 
             const answers = [];
             currentExam.questions.forEach((q, i) => {
-                const inputs = document.querySelectorAll(`input[name="q${i}"]:checked`);
-                const choice = Array.from(inputs).map(inp => parseInt(inp.value));
+                if (q.type === 'open_ended') {
+                    const textarea = document.getElementById(`answer-${i}`);
+                    if (textarea && textarea.value.trim()) {
+                        answers.push({
+                            question_id: q.id,
+                            text_answer: textarea.value.trim()
+                        });
+                    }
+                } else {
+                    const inputs = document.querySelectorAll(`input[name="q${i}"]:checked`);
+                    const choice = Array.from(inputs).map(inp => parseInt(inp.value));
 
-                if (choice.length > 0) {
-                    answers.push({
-                        question_id: q.id,
-                        choice: choice
-                    });
+                    if (choice.length > 0) {
+                        answers.push({
+                            question_id: q.id,
+                            choice: choice
+                        });
+                    }
                 }
             });
 
+            if (answers.length === 0) {
+                alert('Please answer at least one question!');
+                return;
+            }
+
             const resultDiv = document.getElementById('testResult');
-            resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div>Grading your answers...</div>';
+            resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div>Grading your answers with AI...</div>';
 
             try {
                 const response = await fetch(`${API_BASE}/api/grade`, {
@@ -529,14 +675,43 @@
                             Score: <strong>${result.summary.score_percent.toFixed(1)}%</strong>
                         </p>
                         <p>Correct: ${result.summary.correct} / ${result.summary.total}</p>
-                        <div style="margin-top: 20px;">
-                            ${result.per_question.map((r, i) => `
-                                <p>
-                                    Question ${i + 1}:
-                                    ${r.is_correct ? '✅ Correct' : '❌ Incorrect'}
-                                    ${r.partial_credit < 1 && r.partial_credit > 0 ? `(${(r.partial_credit * 100).toFixed(0)}% credit)` : ''}
-                                </p>
-                            `).join('')}
+
+                        <div style="margin-top: 30px;">
+                            <h3>📊 Detailed Results</h3>
+                            ${result.per_question.map((r, i) => {
+                                const question = currentExam.questions.find(q => q.id === r.question_id);
+                                return `
+                                    <div class="question ${question.type === 'open_ended' ? 'open-ended' : ''}">
+                                        <h4>
+                                            Question ${i + 1}:
+                                            ${r.is_correct ? '✅ Correct' : '❌ Incorrect'}
+                                            ${r.partial_credit < 1 && r.partial_credit > 0 ?
+                                                `<span style="color: #f39c12;">(${(r.partial_credit * 100).toFixed(0)}% credit)</span>`
+                                                : ''}
+                                        </h4>
+                                        <p><strong>${question.stem}</strong></p>
+
+                                        ${question.type === 'open_ended' ? `
+                                            <div class="feedback-box">
+                                                <h5>📝 Your Answer:</h5>
+                                                <p>${r.given_text}</p>
+                                                <h5 style="margin-top: 15px;">💬 AI Feedback:</h5>
+                                                <p>${r.feedback}</p>
+                                                <p style="margin-top: 10px;"><strong>Score: ${(r.partial_credit * 100).toFixed(0)}%</strong></p>
+                                            </div>
+                                        ` : `
+                                            <p style="margin-top: 10px;">
+                                                <strong>Your answer:</strong>
+                                                ${r.given.map(idx => question.options[idx]).join(', ')}
+                                            </p>
+                                            <p>
+                                                <strong>Correct answer:</strong>
+                                                ${r.expected.map(idx => question.options[idx]).join(', ')}
+                                            </p>
+                                        `}
+                                    </div>
+                                `;
+                            }).join('')}
                         </div>
                     </div>
                 `;
