@@ -79,10 +79,10 @@ curl -X POST http://localhost:8000/api/generate \
 
 #### Using Python
 ```python
-from examples.notebooks.question_generation import generate_exam, save_exam
+from app.core.exam_builder import generate_exam_from_file, save_exam
 
 # Generate exam from file
-exam = generate_exam(
+exam = generate_exam_from_file(
     "my_content.md",
     total_questions=10,
     language="en"
@@ -105,7 +105,7 @@ for q in exam.questions:
 ## 📝 Example 2: Generate Questions from Text (No File)
 
 ```python
-from examples.notebooks.question_generation import generate_single_question
+from app.core.exam_builder import generate_question
 
 # Direct text input
 content = """
@@ -115,7 +115,7 @@ unsupervised learning, and reinforcement learning approaches.
 """
 
 # Generate single choice question
-question = generate_single_question(
+question = generate_question(
     content=content,
     question_type="single_choice",
     difficulty="medium",
@@ -150,19 +150,19 @@ python scripts/test_model_answers.py \
 
 ### Using Python
 ```python
-from examples.notebooks.model_evaluation import test_model, compare_models
+from app.core.exam_builder import load_exam
+from app.services.model_answer_tester import ModelAnswerTester
+
+tester = ModelAnswerTester()
+exam = load_exam("data/out/exam_ex-123.json")
 
 # Test one model
-result = test_model(
-    "data/out/exam_ex-123.json",
-    "gpt-4o-mini",
-    "openai"
-)
+result = tester.test_model_on_exam(exam, "gpt-4o-mini", "openai")
 print(f"Accuracy: {result.accuracy:.2%}")
 
 # Compare models
-comparison = compare_models(
-    "data/out/exam_ex-123.json",
+comparison = tester.batch_test_models(
+    exam,
     models=[
         {"model_name": "gpt-4o-mini", "provider": "openai"},
         {"model_name": "yandexgpt-lite", "provider": "yandex"}
@@ -177,9 +177,9 @@ print(f"Best: {comparison['best_model']} ({comparison['best_accuracy']:.2%})")
 
 ```python
 # 1. Generate exam from content
-from examples.notebooks.question_generation import generate_exam, save_exam
+from app.core.exam_builder import generate_exam_from_file, save_exam, load_exam
 
-exam = generate_exam(
+exam = generate_exam_from_file(
     "my_content.md",
     total_questions=20,
     single_choice_ratio=0.5,
@@ -189,10 +189,13 @@ exam = generate_exam(
 exam_file = save_exam(exam)
 
 # 2. Test models on exam
-from examples.notebooks.model_evaluation import compare_models, print_comparison
+from app.services.model_answer_tester import ModelAnswerTester
 
-comparison = compare_models(
-    exam_file,
+tester = ModelAnswerTester()
+exam = load_exam(exam_file)
+
+comparison = tester.batch_test_models(
+    exam,
     models=[
         {"model_name": "gpt-4o-mini", "provider": "openai"},
         {"model_name": "gpt-4o", "provider": "openai"}
