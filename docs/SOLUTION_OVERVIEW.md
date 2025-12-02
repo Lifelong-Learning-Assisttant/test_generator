@@ -21,12 +21,21 @@ Consolidated description of the current solution (backend, REST API, evaluation 
   - `evaluator.py` — quality/consistency metrics, model comparison helpers.
   - `retriever.py` — placeholder RAG retriever (not wired into generation yet).
 - `app/models/schemas.py` — Pydantic v2 models for API contracts (Exam, Question, ExamConfig, GradeRequest/Response).
-- `app/services/openai_client.py` — OpenAI client wrapper (JSON mode prompts, language-aware).
+- `app/services/` — LLM client wrappers and evaluation tools:
+  - `openai_client.py` — OpenAI API wrapper (question generation, answering, grading).
+  - `yandex_client.py` — YandexGPT API wrapper (same capabilities as OpenAI).
+  - `model_answer_tester.py` — Service for testing how well models answer exam questions.
 - `static/` — prebuilt frontend served from `/`.
 - `data/` — runtime root
   - `uploads/` — user Markdown uploads
   - `out/` — generated exams and grading outputs
-- `scripts/evaluate_models.py` — CLI to benchmark multiple LLMs against the same Markdown source.
+  - `results/` — model answer evaluation results
+- `scripts/` — CLI utilities:
+  - `evaluate_models.py` — Benchmark question generation quality across LLMs.
+  - `test_model_answers.py` — Test and compare how well models answer exam questions.
+- `examples/notebooks/` — Jupyter-friendly examples:
+  - `01_question_generation.py` — Generate questions from content.
+  - `02_model_evaluation.py` — Test models on exams.
 
 ## REST API (current behavior)
 - `GET /health` → `{status, version}`.
@@ -51,10 +60,11 @@ Consolidated description of the current solution (backend, REST API, evaluation 
 
 ## Runtime & Configuration
 - Environment (`app/config.py` via `.env`):
-  - `OPENAI_API_KEY` (required), `OPENAI_MODEL` (default `gpt-4o-mini`), `OPENAI_BASE_URL` (optional).
-  - `DEFAULT_TOTAL_QUESTIONS`, `DEFAULT_SINGLE_CHOICE_RATIO`, `DEFAULT_MULTIPLE_CHOICE_RATIO`.
-  - `DATA_DIR` (default `data`), `OUTPUT_DIR` (default under `data/out`), `UPLOADS_DIR` (default under `data/uploads`).
-- Directories created on startup: `data/out/` for exams/grades, `data/uploads/` for uploaded Markdown (both under `data_dir` unless overridden).
+  - **OpenAI**: `OPENAI_API_KEY` (required for OpenAI models), `OPENAI_MODEL` (default `gpt-4o-mini`), `OPENAI_BASE_URL` (optional).
+  - **Yandex Cloud** (optional): `YANDEX_CLOUD_API_KEY`, `YANDEX_CLOUD_API_KEY_IDENTIFIER`, `YANDEX_FOLDER_ID`, `YANDEX_MODEL` (default `yandexgpt-lite`).
+  - **Generation defaults**: `DEFAULT_TOTAL_QUESTIONS`, `DEFAULT_SINGLE_CHOICE_RATIO`, `DEFAULT_MULTIPLE_CHOICE_RATIO`.
+  - **Paths**: `DATA_DIR` (default `data`), `OUTPUT_DIR` (default under `data/out`), `UPLOADS_DIR` (default under `data/uploads`).
+- Directories created on startup: `data/out/` for exams/grades, `data/uploads/` for uploaded Markdown, `data/results/` for evaluation results.
 - CORS allows `*` (development convenience); add restrictions before production.
 - No authentication/authorization; storage is filesystem-only.
 
@@ -69,18 +79,39 @@ Consolidated description of the current solution (backend, REST API, evaluation 
    - Navigate to `/` to access the static client (served from `static/`) that walks through upload → generate → take test → grade.
 
 ## Evaluation & QA
-- `scripts/evaluate_models.py` runs end-to-end generation/grading for one or more models, computes:
-  - Question quality (`answerability`, `coherence`, `difficulty_distribution`, `overall`).
-  - Grading consistency across repeated runs.
-  - Cost-per-question estimates and model rankings.
-  - Outputs JSON reports under `data/out/evaluations/`.
-- Tests (pytest + behave) live under `tests/unit`, `tests/integration`, and `tests/bdd`; they cover schema validation, parsing, generation, grading, API health, and evaluation metrics. Run them with `pytest` or `behave` from the repo root.
+
+### Two Evaluation Systems
+
+**1. Question Generation Quality** (`scripts/evaluate_models.py`)
+- Evaluates how well models **generate** questions from content
+- Metrics: answerability, coherence, difficulty distribution, grading consistency
+- Output: `data/out/evaluations/evaluation_*.json`
+- Usage: `python scripts/evaluate_models.py --models gpt-4o-mini,gpt-4o --content examples/medical_content.md`
+
+**2. Model Answer Evaluation** (`scripts/test_model_answers.py`)
+- Tests how well models **answer** existing exam questions
+- Metrics: accuracy, AI-pass rate, per-question breakdown
+- Supports: OpenAI GPT (gpt-4o, gpt-4o-mini) and YandexGPT (yandexgpt, yandexgpt-lite)
+- Output: `data/results/model_test_*.json` and `model_comparison_*.json`
+- Usage:
+  - Single model: `python scripts/test_model_answers.py --exam data/out/exam_ex-123.json --model gpt-4o-mini --provider openai`
+  - Compare models: `python scripts/test_model_answers.py --exam data/out/exam_ex-123.json --compare`
+
+### Jupyter-Friendly Workflows
+See `examples/notebooks/` for research-oriented examples:
+- `01_question_generation.py` - Generate and save exams from content
+- `02_model_evaluation.py` - Test models and compare results
+
+### Automated Tests
+Tests (pytest + behave) live under `tests/unit`, `tests/integration`, and `tests/bdd`; they cover schema validation, parsing, generation, grading, API health, evaluation metrics, and new YandexGPT integration. Run them with `pytest` or `behave` from the repo root.
 
 ## Limitations & Notes
-- OpenAI key is mandatory; generation and open-ended grading will fail without it.
+- OpenAI or Yandex API key required depending on which provider you use.
+- Both providers support: question generation, answering questions, and grading open-ended responses.
 - RAG retriever is a placeholder and is not used in the current generation flow.
-- Exams and grading results are stored locally; cleanup/rotation is manual.
+- Exams, grading results, and evaluation outputs are stored locally; cleanup/rotation is manual.
 - Wide-open CORS and lack of auth are acceptable for local/demo use only.
+- For detailed evaluation workflows, see `docs/EVALUATION.md`.
 
 ## Operational Recipes
 - Install deps: `pip install -r requirements.txt`

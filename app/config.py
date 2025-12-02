@@ -20,6 +20,12 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-4o-mini"  # Lightweight model for testing
     openai_base_url: str | None = None
 
+    # Yandex Cloud settings
+    yandex_cloud_api_key: str = ""
+    yandex_cloud_api_key_identifier: str = ""
+    yandex_folder_id: str = ""
+    yandex_model: str = "yandexgpt-lite"  # yandexgpt-lite or yandexgpt
+
     # Generation defaults
     default_total_questions: int = 20
     default_single_choice_ratio: float = 0.7

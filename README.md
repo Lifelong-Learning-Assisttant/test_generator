@@ -1,6 +1,6 @@
 # LLM Test Generator
 
-FastAPI service that turns Markdown medical content into exams and grades submitted answers (choice and open-ended) with OpenAI.
+FastAPI service that generates educational exams from Markdown content and evaluates how well different LLM models answer questions. Supports OpenAI GPT and Yandex GPT for both question generation and answer evaluation.
 
 ## Quick Start
 - Requirements: Python 3.11+, `pip`, OpenAI API key.
@@ -10,9 +10,16 @@ FastAPI service that turns Markdown medical content into exams and grades submit
   ```
 - Configure `.env` (create if missing):
   ```env
+  # OpenAI configuration
   OPENAI_API_KEY=sk-...
   OPENAI_MODEL=gpt-4o-mini     # optional override
   OPENAI_BASE_URL=             # optional, for proxies/self-hosted endpoints
+
+  # Yandex Cloud configuration (optional, for Yandex models)
+  YANDEX_CLOUD_API_KEY=AQVN...
+  YANDEX_CLOUD_API_KEY_IDENTIFIER=ajei...
+  YANDEX_FOLDER_ID=b1g...
+
   OUTPUT_DIR=data/out          # where exams/grades are stored (default under data/)
   ```
 - Run the API + static UI (creates data folders under `data/`):
@@ -53,27 +60,84 @@ app/
   api/              # REST endpoints (generate, grade, files, health)
   core/             # Parser, generator, grader, evaluator, RAG placeholder
   models/           # Pydantic schemas for API contracts
-  services/         # OpenAI client wrapper
+  services/         # LLM client wrappers (OpenAI, YandexGPT)
+    openai_client.py     # OpenAI API wrapper
+    yandex_client.py     # YandexGPT API wrapper
+    model_answer_tester.py  # Model answer evaluation service
 static/             # Bundled frontend served from /
 data/               # Runtime root for generated artifacts
   uploads/          # Uploaded Markdown files
   out/              # Generated exams and grading outputs
-scripts/evaluate_models.py  # Model benchmarking CLI
-tests/              # unit/integration/Bdd suites
-docs/SOLUTION_OVERVIEW.md   # Consolidated solution guide
+scripts/
+  evaluate_models.py       # Question generation quality benchmarking
+  test_model_answers.py    # Model answer evaluation CLI
+examples/notebooks/        # Jupyter-friendly examples
+  01_question_generation.py  # Generate questions from content
+  02_model_evaluation.py     # Test models on exams
+tests/              # unit/integration/BDD suites
+docs/
+  SOLUTION_OVERVIEW.md   # Consolidated solution guide
+  EVALUATION.md          # Evaluation systems documentation
 ```
 
 ## Testing and Evaluation
-- Run automated tests:
-  ```bash
-  pytest tests/ -v
-  behave tests/bdd/features/
-  ```
-- Coverage HTML reports are written to `data/htmlcov/` (set by pytest addopts and coverage config).
-- Benchmark different LLMs:
-  ```bash
-  python scripts/evaluate_models.py --models gpt-4o-mini,gpt-4o --content examples/sample_medical.md
-  ```
+
+### Automated Tests
+```bash
+pytest tests/ -v                    # Run all unit tests
+behave tests/bdd/features/          # Run BDD scenarios
+pytest --cov=app --cov-report=html  # Generate coverage report
+```
+Coverage HTML reports are written to `data/htmlcov/`.
+
+### Question Generation Quality Evaluation
+Benchmark different LLMs for question generation:
+```bash
+python scripts/evaluate_models.py \
+  --models gpt-4o-mini,gpt-4o \
+  --content examples/medical_content.md \
+  --num-questions 10
+```
+
+### Model Answer Evaluation
+Test how well models answer exam questions:
+```bash
+# Test single model
+python scripts/test_model_answers.py \
+  --exam data/out/exam_ex-123.json \
+  --model gpt-4o-mini \
+  --provider openai
+
+# Compare multiple models
+python scripts/test_model_answers.py \
+  --exam data/out/exam_ex-123.json \
+  --compare
+```
+
+### Jupyter-Friendly Examples
+```python
+# Generate questions
+from examples.notebooks.question_generation import generate_exam, save_exam
+
+exam = generate_exam("content.md", total_questions=20, language="ru")
+exam_file = save_exam(exam)
+
+# Test models
+from examples.notebooks.model_evaluation import test_model, compare_models
+
+result = test_model(exam_file, "gpt-4o-mini", "openai")
+print(f"Accuracy: {result.accuracy:.2%}")
+
+comparison = compare_models(
+    exam_file,
+    models=[
+        {"model_name": "gpt-4o-mini", "provider": "openai"},
+        {"model_name": "yandexgpt-lite", "provider": "yandex"}
+    ]
+)
+```
+
+See `docs/EVALUATION.md` for detailed evaluation workflows.
 
 ## Notes
 - OpenAI key is required for question generation and open-ended grading.

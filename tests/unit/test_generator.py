@@ -68,7 +68,8 @@ class TestQuestionGenerator:
         config = ExamConfig(
             total_questions=10,
             single_choice_ratio=0.7,
-            multiple_choice_ratio=0.3
+            multiple_choice_ratio=0.3,
+            open_ended_ratio=0.0
         )
         result = generator.generate(sample_document, config, "test")
 
@@ -99,7 +100,8 @@ class TestQuestionGenerator:
         config = ExamConfig(
             total_questions=5,
             single_choice_ratio=1.0,
-            multiple_choice_ratio=0.0
+            multiple_choice_ratio=0.0,
+            open_ended_ratio=0.0
         )
         result = generator.generate(sample_document, config, "test")
 
@@ -112,7 +114,8 @@ class TestQuestionGenerator:
         config = ExamConfig(
             total_questions=5,
             single_choice_ratio=0.0,
-            multiple_choice_ratio=1.0
+            multiple_choice_ratio=1.0,
+            open_ended_ratio=0.0
         )
         result = generator.generate(sample_document, config, "test")
 
