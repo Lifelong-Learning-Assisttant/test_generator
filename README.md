@@ -154,10 +154,10 @@ comparison = compare_models(
 
 ## 📚 Documentation
 
-- **🚀 [Quick Start Guide](docs/QUICK_START.md)** - Get started in 5 minutes with examples
-- **📖 [Scripts Guide](docs/SCRIPTS_GUIDE.md)** - Understand all scripts and when to use them
-- **📊 [Evaluation Guide](docs/EVALUATION.md)** - Complete evaluation workflows and best practices
-- **🏗️ [Solution Overview](docs/SOLUTION_OVERVIEW.md)** - Architecture, API reference, and internals
+- **🚀 Quick Start:** core steps in this README; full guide at `docs/QUICK_START.md`
+- **📖 Architecture & API:** `docs/SOLUTION_OVERVIEW.md`
+- **📊 Evaluation workflows:** `docs/EVALUATION.md`
+- **🔧 Scripts reference:** `docs/SCRIPTS_GUIDE.md`
 
 ## Notes
 - OpenAI or Yandex API key required depending on provider choice
