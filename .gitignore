@@ -55,6 +55,7 @@ out/*.csv
 !out/.gitkeep
 data/out/
 data/uploads/
+.ipynb_checkpoints/
 
 # OS
 .DS_Store

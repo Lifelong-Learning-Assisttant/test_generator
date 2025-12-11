@@ -118,6 +118,8 @@ class ExamConfig(BaseModel):
     difficulty: Literal["easy", "medium", "hard", "mixed"] = Field("mixed", description="Question difficulty")
     language: Literal["en", "ru"] = Field("en", description="Language for questions and prompts (en=English, ru=Russian)")
     seed: Optional[int] = Field(None, description="Random seed for reproducibility")
+    provider: Literal["openai", "yandex", "local"] = Field("openai", description="LLM provider for generation/grading")
+    model_name: Optional[str] = Field(None, description="Specific model to use for the provider")
 
     @model_validator(mode='after')
     def sync_counts_and_ratios(self) -> 'ExamConfig':

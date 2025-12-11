@@ -35,6 +35,8 @@ class ExamBuilder:
         open_ended_ratio: float = 0.2,
         difficulty: str = "mixed",
         language: str = "en",
+        provider: str = "openai",
+        model_name: Optional[str] = None,
         seed: Optional[int] = None,
         exam_id: Optional[str] = None
     ) -> Exam:
@@ -72,6 +74,8 @@ class ExamBuilder:
             open_ended_ratio=open_ended_ratio,
             difficulty=difficulty,
             language=language,
+            provider=provider,
+            model_name=model_name,
             seed=seed,
             exam_id=exam_id
         )
@@ -85,6 +89,8 @@ class ExamBuilder:
         open_ended_ratio: float = 0.2,
         difficulty: str = "mixed",
         language: str = "en",
+        provider: str = "openai",
+        model_name: Optional[str] = None,
         seed: Optional[int] = None,
         exam_id: Optional[str] = None
     ) -> Exam:
@@ -121,7 +127,9 @@ class ExamBuilder:
             open_ended_ratio=open_ended_ratio,
             difficulty=difficulty,
             language=language,
-            seed=seed
+            seed=seed,
+            provider=provider,
+            model_name=model_name
         )
 
         # Generate exam

@@ -1,22 +1,29 @@
 """
-Question generator using OpenAI for creating exam questions from educational content.
+Question generator using LLM provider for creating exam questions from educational content.
 """
 import random
-import uuid
-from typing import List
+from typing import List, Optional
+from app.config import settings
 from app.core.parser import ParsedDocument, ParsedSection
 from app.models.schemas import (
     Question, Exam, ExamConfig, SourceReference, QuestionMeta
 )
-from app.services.openai_client import OpenAIClient
+from app.services.llm_provider import get_llm_client, LLMProvider, ProviderName
 
 
 class QuestionGenerator:
     """Generates exam questions from parsed educational content."""
 
-    def __init__(self):
-        """Initialize generator with OpenAI client."""
-        self.openai_client = OpenAIClient()
+    def __init__(
+        self,
+        provider: Optional[ProviderName] = None,
+        model_name: Optional[str] = None,
+        llm_client: Optional[LLMProvider] = None
+    ):
+        """Initialize generator with configurable LLM provider."""
+        self.provider_name = provider or settings.default_provider
+        self.model_name = model_name
+        self.llm_client = llm_client
 
     def generate(
         self,
@@ -45,14 +52,15 @@ class QuestionGenerator:
         if config.seed is not None:
             random.seed(config.seed)
 
-        # Calculate number of each question type
-        num_single = int(config.total_questions * config.single_choice_ratio)
-        num_multiple = int(config.total_questions * config.multiple_choice_ratio)
-        num_open_ended = config.total_questions - num_single - num_multiple
+        # Calculate number of each question type using resolved counts
+        num_single = config.single_choice_count or 0
+        num_multiple = config.multiple_choice_count or 0
+        num_open_ended = config.open_ended_count or 0
 
         # Generate questions
         questions: List[Question] = []
         question_counter = 0
+        llm_client = self._get_llm_client(config)
 
         # Generate single choice questions
         for i in range(num_single):
@@ -61,7 +69,8 @@ class QuestionGenerator:
                 question_type="single_choice",
                 question_num=question_counter,
                 difficulty=config.difficulty,
-                config=config
+                config=config,
+                llm_client=llm_client
             )
             questions.append(question)
             question_counter += 1
@@ -73,7 +82,8 @@ class QuestionGenerator:
                 question_type="multiple_choice",
                 question_num=question_counter,
                 difficulty=config.difficulty,
-                config=config
+                config=config,
+                llm_client=llm_client
             )
             questions.append(question)
             question_counter += 1
@@ -85,7 +95,8 @@ class QuestionGenerator:
                 question_type="open_ended",
                 question_num=question_counter,
                 difficulty=config.difficulty,
-                config=config
+                config=config,
+                llm_client=llm_client
             )
             questions.append(question)
             question_counter += 1
@@ -106,7 +117,8 @@ class QuestionGenerator:
         question_type: str,
         question_num: int,
         difficulty: str,
-        config: ExamConfig
+        config: ExamConfig,
+        llm_client: LLMProvider
     ) -> Question:
         """
         Generate a single question.
@@ -133,9 +145,9 @@ class QuestionGenerator:
         # Get language from config (defaulting to English)
         language = getattr(config, 'language', 'en')
 
-        # Generate question using OpenAI
+        # Generate question using configured LLM
         try:
-            result = self.openai_client.generate_question(
+            result = llm_client.generate_question(
                 content=section.content,
                 question_type=question_type,
                 difficulty=actual_difficulty,
@@ -188,6 +200,16 @@ class QuestionGenerator:
         except Exception as e:
             # Fallback to simple question if OpenAI fails
             raise RuntimeError(f"Failed to generate question {question_num}: {str(e)}")
+
+    def _get_llm_client(self, config: ExamConfig) -> LLMProvider:
+        """Return the LLM client for this generation run."""
+        provider = getattr(config, "provider", None) or self.provider_name
+        model = getattr(config, "model_name", None) or self.model_name
+
+        if self.llm_client:
+            return self.llm_client
+
+        return get_llm_client(provider=provider, model_name=model)
 
     def _create_fallback_question(
         self,

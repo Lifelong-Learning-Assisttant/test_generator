@@ -14,7 +14,7 @@ class YandexGPTClient:
 
     API_ENDPOINT = "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
 
-    def __init__(self):
+    def __init__(self, model_override: Optional[str] = None):
         """Initialize YandexGPT client with credentials from settings."""
         if not settings.yandex_cloud_api_key:
             raise ValueError("YANDEX_CLOUD_API_KEY not set in environment")
@@ -23,7 +23,7 @@ class YandexGPTClient:
 
         self.api_key = settings.yandex_cloud_api_key
         self.folder_id = settings.yandex_folder_id
-        self.model = settings.yandex_model
+        self.model = model_override or settings.yandex_model
 
     def _make_request(self, messages: List[Dict[str, str]], temperature: float = 0.7) -> str:
         """

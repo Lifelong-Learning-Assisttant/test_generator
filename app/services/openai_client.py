@@ -2,7 +2,7 @@
 OpenAI API client wrapper for question generation.
 """
 import json
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from openai import OpenAI
 from app.config import settings
 from app.prompts import prompts_en, prompts_ru
@@ -11,16 +11,16 @@ from app.prompts import prompts_en, prompts_ru
 class OpenAIClient:
     """Wrapper for OpenAI API calls."""
 
-    def __init__(self):
+    def __init__(self, model_override: Optional[str] = None):
         """Initialize OpenAI client with API key from settings."""
-        if not settings.openai_api_key:
-            raise ValueError("OPENAI_API_KEY not set in environment")
+        self.model = model_override or settings.openai_model
+        self.client = None
 
-        self.client = OpenAI(
-            api_key=settings.openai_api_key,
-            base_url=settings.openai_base_url
-        )
-        self.model = settings.openai_model
+        if settings.openai_api_key:
+            self.client = OpenAI(
+                api_key=settings.openai_api_key,
+                base_url=settings.openai_base_url
+            )
 
     def generate_question(
         self,
@@ -48,6 +48,9 @@ class OpenAIClient:
         system_message = prompts_module.SYSTEM_MESSAGE_RU if language == "ru" else prompts_module.SYSTEM_MESSAGE_EN
 
         try:
+            if not self.client:
+                raise RuntimeError("OpenAI client not configured. Set OPENAI_API_KEY or use provider='local'.")
+
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
@@ -153,6 +156,9 @@ class OpenAIClient:
                 prompt = f"Question: {question_stem}\n\nOptions:\n{options_text}\n\nSelect ALL correct answers. Respond with the option numbers separated by commas."
 
         try:
+            if not self.client:
+                raise RuntimeError("OpenAI client not configured. Set OPENAI_API_KEY or use provider='local'.")
+
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
@@ -240,6 +246,9 @@ Important:
 """
 
         try:
+            if not self.client:
+                raise RuntimeError("OpenAI client not configured. Set OPENAI_API_KEY or use provider='local'.")
+
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[

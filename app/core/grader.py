@@ -6,15 +6,23 @@ from app.models.schemas import (
     Exam, GradeRequest, GradeResponse,
     QuestionResult, GradeSummary, Question, StudentAnswer
 )
-from app.services.openai_client import OpenAIClient
+from app.config import settings
+from app.services.llm_provider import get_llm_client, LLMProvider, ProviderName
 
 
 class Grader:
     """Handles grading of student answers against exam answer keys."""
 
-    def __init__(self):
-        """Initialize grader with OpenAI client for open-ended grading."""
-        self.openai_client = OpenAIClient()
+    def __init__(
+        self,
+        provider: Optional[ProviderName] = None,
+        model_name: Optional[str] = None,
+        llm_client: Optional[LLMProvider] = None
+    ):
+        """Initialize grader with LLM provider for open-ended grading."""
+        self.provider_name = provider or settings.default_provider
+        self.model_name = model_name
+        self.llm_client = llm_client
 
     def grade(
         self,
@@ -50,13 +58,15 @@ class Grader:
         # Grade each answer
         results: List[QuestionResult] = []
         total_credit = 0.0
+        llm_client = self._get_llm_client(getattr(exam, "config_used", None))
+        language = getattr(exam.config_used, "language", "en") if exam else "en"
 
         for student_answer in request.answers:
             question = questions_map[student_answer.question_id]
 
             # Grade based on question type
             if question.type == "open_ended":
-                result = self._grade_open_ended_question(question, student_answer)
+                result = self._grade_open_ended_question(question, student_answer, llm_client, language)
             else:
                 result = self._grade_choice_question(
                     question,
@@ -138,7 +148,9 @@ class Grader:
     def _grade_open_ended_question(
         self,
         question: Question,
-        student_answer: StudentAnswer
+        student_answer: StudentAnswer,
+        llm_client: LLMProvider,
+        language: str
     ) -> QuestionResult:
         """
         Grade an open-ended question using AI.
@@ -164,11 +176,12 @@ class Grader:
 
         try:
             # Use OpenAI to grade the answer
-            grading_result = self.openai_client.grade_open_ended(
+            grading_result = llm_client.grade_open_ended(
                 question_stem=question.stem,
                 reference_answer=question.reference_answer,
                 rubric=question.rubric,
-                student_answer=student_answer.text_answer
+                student_answer=student_answer.text_answer,
+                language=language
             )
 
             # Determine if "correct" (>= 0.7 score)
@@ -234,3 +247,13 @@ class Grader:
 
         # Clamp to [0.0, 1.0]
         return max(0.0, min(1.0, credit))
+
+    def _get_llm_client(self, exam_config) -> LLMProvider:
+        """Return configured LLM client for grading."""
+        provider = getattr(exam_config, "provider", None) or self.provider_name
+        model = getattr(exam_config, "model_name", None) or self.model_name
+
+        if self.llm_client:
+            return self.llm_client
+
+        return get_llm_client(provider=provider, model_name=model)

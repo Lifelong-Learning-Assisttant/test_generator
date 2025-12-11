@@ -15,6 +15,9 @@ FastAPI service that generates educational exams from Markdown content and evalu
   OPENAI_MODEL=gpt-4o-mini     # optional override
   OPENAI_BASE_URL=             # optional, for proxies/self-hosted endpoints
 
+  # Provider selection
+  DEFAULT_PROVIDER=openai       # openai | yandex | local (stub)
+
   # Yandex Cloud configuration (optional, for Yandex models)
   YANDEX_CLOUD_API_KEY=AQVN...
   YANDEX_CLOUD_API_KEY_IDENTIFIER=ajei...
@@ -30,7 +33,7 @@ FastAPI service that generates educational exams from Markdown content and evalu
 
 ## API Overview
 - `GET /health` — service liveness.
-- `POST /api/generate` — generate an exam from Markdown (`markdown_content` + optional `config` supporting counts or ratios, difficulty, language, seed). Persists to `data/out/exam_<id>.json`.
+- `POST /api/generate` — generate an exam from Markdown (`markdown_content` + optional `config` supporting counts or ratios, difficulty, language, seed, provider/model_name). Persists to `data/out/exam_<id>.json`.
 - `POST /api/grade` — grade answers for an `exam_id`; multiple choice graded locally with partial credit, open-ended graded via LLM. Persists to `data/out/grade_<id>.json`.
 - `POST /api/upload` — upload `.md` into `data/uploads/`.
 - `GET /api/files` and `GET /api/files/{filename}` — list/read uploaded Markdown.
@@ -148,5 +151,6 @@ comparison = compare_models(
 
 ## Notes
 - OpenAI or Yandex API key required depending on provider choice
+- If provider credentials are missing, the service falls back to a local stub LLM for development (set `DEFAULT_PROVIDER=local` explicitly for offline use)
 - CORS is wide open and there is no authentication; tighten before production
 - Exams/grades are stored on disk; clean up `data/out/` and `data/uploads/` as needed

@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     api_title: str = "LLM Test Generator"
     api_version: str = "0.1.0"
     api_description: str = "Generate and grade educational tests using LLMs"
+    default_provider: str = "openai"
 
     # OpenAI settings
     openai_api_key: str = ""

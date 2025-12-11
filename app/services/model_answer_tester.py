@@ -8,8 +8,7 @@ from typing import List, Dict, Any, Optional, Literal
 from dataclasses import dataclass, asdict
 
 from app.models.schemas import Exam, Question
-from app.services.openai_client import OpenAIClient
-from app.services.yandex_client import YandexGPTClient
+from app.services.llm_provider import get_llm_client, ProviderName
 from app.config import settings
 
 
@@ -43,7 +42,7 @@ class ModelAnswerTester:
         self,
         exam: Exam,
         model_name: str,
-        provider: Literal["openai", "yandex"],
+        provider: Literal["openai", "yandex", "local"],
         output_dir: Optional[str] = None,
         language: str = "en"
     ) -> ModelTestResult:
@@ -60,108 +59,93 @@ class ModelAnswerTester:
         Returns:
             ModelTestResult with accuracy and per-question details
         """
-        if provider == "openai":
-            client = OpenAIClient()
-            # Temporarily override model
-            original_model = client.model
-            client.model = model_name
-        elif provider == "yandex":
-            client = YandexGPTClient()
-            original_model = client.model
-            client.model = model_name
-        else:
-            raise ValueError(f"Unsupported provider: {provider}")
+        client = get_llm_client(provider=provider, model_name=model_name)
 
-        try:
-            per_question_results = []
-            correct_count = 0
+        per_question_results = []
+        correct_count = 0
 
-            for question in exam.questions:
-                try:
-                    # Get model's answer
-                    if question.type == "open_ended":
-                        model_answer = client.answer_question(
-                            question_stem=question.stem,
-                            question_type=question.type,
-                            language=language
-                        )
+        for question in exam.questions:
+            try:
+                # Get model's answer
+                if question.type == "open_ended":
+                    model_answer = client.answer_question(
+                        question_stem=question.stem,
+                        question_type=question.type,
+                        language=language
+                    )
 
-                        # Grade the open-ended answer
-                        grading_result = client.grade_open_ended(
-                            question_stem=question.stem,
-                            reference_answer=question.reference_answer,
-                            rubric=question.rubric,
-                            student_answer=model_answer["text_answer"],
-                            language=language
-                        )
+                    # Grade the open-ended answer
+                    grading_result = client.grade_open_ended(
+                        question_stem=question.stem,
+                        reference_answer=question.reference_answer,
+                        rubric=question.rubric,
+                        student_answer=model_answer["text_answer"],
+                        language=language
+                    )
 
-                        is_correct = grading_result["score"] >= 0.7  # 70% threshold
-                        per_question_results.append({
-                            "question_id": question.id,
-                            "question_type": question.type,
-                            "correct": is_correct,
-                            "model_answer": model_answer["text_answer"],
-                            "expected_answer": question.reference_answer,
-                            "grading_score": grading_result["score"],
-                            "feedback": grading_result["feedback"],
-                            "rubric_scores": grading_result["rubric_scores"]
-                        })
-                    else:
-                        # Choice questions (single or multiple)
-                        model_answer = client.answer_question(
-                            question_stem=question.stem,
-                            question_type=question.type,
-                            options=question.options,
-                            language=language
-                        )
-
-                        is_correct = self._check_answer(question, model_answer)
-                        per_question_results.append({
-                            "question_id": question.id,
-                            "question_type": question.type,
-                            "correct": is_correct,
-                            "model_answer": model_answer["choice"],
-                            "expected_answer": question.correct,
-                            "reasoning": model_answer.get("reasoning", "")
-                        })
-
-                    if is_correct:
-                        correct_count += 1
-
-                except Exception as e:
-                    # Log error but continue with other questions
+                    is_correct = grading_result["score"] >= 0.7  # 70% threshold
                     per_question_results.append({
                         "question_id": question.id,
                         "question_type": question.type,
-                        "correct": False,
-                        "error": str(e)
+                        "correct": is_correct,
+                        "model_answer": model_answer["text_answer"],
+                        "expected_answer": question.reference_answer,
+                        "grading_score": grading_result["score"],
+                        "feedback": grading_result["feedback"],
+                        "rubric_scores": grading_result["rubric_scores"]
+                    })
+                else:
+                    # Choice questions (single or multiple)
+                    model_answer = client.answer_question(
+                        question_stem=question.stem,
+                        question_type=question.type,
+                        options=question.options,
+                        language=language
+                    )
+
+                    is_correct = self._check_answer(question, model_answer)
+                    per_question_results.append({
+                        "question_id": question.id,
+                        "question_type": question.type,
+                        "correct": is_correct,
+                        "model_answer": model_answer["choice"],
+                        "expected_answer": question.correct,
+                        "reasoning": model_answer.get("reasoning", "")
                     })
 
-            accuracy = correct_count / len(exam.questions) if exam.questions else 0.0
+                if is_correct:
+                    correct_count += 1
 
-            result = ModelTestResult(
-                model_name=model_name,
-                provider=provider,
-                exam_id=exam.exam_id,
-                total_questions=len(exam.questions),
-                correct_count=correct_count,
-                accuracy=round(accuracy, 4),
-                per_question_results=per_question_results,
-                metadata={
-                    "language": language,
-                    "exam_config": exam.config_used
-                }
-            )
+            except Exception as e:
+                # Log error but continue with other questions
+                per_question_results.append({
+                    "question_id": question.id,
+                    "question_type": question.type,
+                    "correct": False,
+                    "error": str(e)
+                })
 
-            # Save result if output_dir specified
-            if output_dir:
-                self.save_result(result, output_dir)
+        accuracy = correct_count / len(exam.questions) if exam.questions else 0.0
 
-            return result
+        result = ModelTestResult(
+            model_name=model_name,
+            provider=provider,
+            exam_id=exam.exam_id,
+            total_questions=len(exam.questions),
+            correct_count=correct_count,
+            accuracy=round(accuracy, 4),
+            per_question_results=per_question_results,
+            metadata={
+                "language": language,
+                "exam_config": exam.config_used
+            }
+        )
 
-        finally:
-            # Restore original model
-            client.model = original_model
+        # Save result if output_dir specified
+        if output_dir:
+            self.save_result(result, output_dir)
+
+        return result
 
     def _check_answer(self, question: Question, model_answer: Dict[str, Any]) -> bool:
         """

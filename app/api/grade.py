@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException
 from app.models.schemas import GradeRequest, GradeResponse, Exam
 from app.core.grader import Grader
 from app.config import settings
+from app.utils.path import safe_join
 
 router = APIRouter()
 grader = Grader()
@@ -28,7 +29,10 @@ async def grade_exam(request: GradeRequest):
         HTTPException: If exam not found or grading fails
     """
     # Load exam from file
-    exam_file = Path(settings.output_dir) / f"exam_{request.exam_id}.json"
+    try:
+        exam_file = safe_join(Path(settings.output_dir), f"exam_{request.exam_id}.json")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid exam id")
 
     if not exam_file.exists():
         raise HTTPException(

@@ -7,6 +7,7 @@ from typing import List
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
 from app.config import settings
+from app.utils.path import safe_join
 
 router = APIRouter()
 
@@ -34,7 +35,11 @@ async def upload_file(file: UploadFile = File(...)):
         )
 
     # Save file
-    file_path = UPLOAD_DIR / file.filename
+    try:
+        file_path = safe_join(UPLOAD_DIR, file.filename)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
     try:
         content = await file.read()
         with open(file_path, 'wb') as f:
@@ -85,7 +90,10 @@ async def get_file_content(filename: str):
     Returns:
         File content
     """
-    file_path = UPLOAD_DIR / filename
+    try:
+        file_path = safe_join(UPLOAD_DIR, filename)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid filename")
 
     if not file_path.exists():
         raise HTTPException(
@@ -148,7 +156,10 @@ async def get_exam(exam_id: str):
     """
     import json
 
-    exam_file = Path(settings.output_dir) / f"exam_{exam_id}.json"
+    try:
+        exam_file = safe_join(Path(settings.output_dir), f"exam_{exam_id}.json")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid exam id")
 
     if not exam_file.exists():
         raise HTTPException(
