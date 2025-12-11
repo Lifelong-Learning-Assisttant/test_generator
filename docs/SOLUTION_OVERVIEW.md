@@ -16,7 +16,7 @@ Consolidated description of the current solution (backend, REST API, evaluation 
   - `health.py` (`GET /health`) — liveness/version.
 - `app/core/` — domain logic:
   - `parser.py` — Markdown → `ParsedDocument`/sections.
-  - `generator.py` — builds questions via `OpenAIClient`, supports counts or ratios, deterministic with `seed`.
+  - `generator.py` — builds questions via provider-agnostic LLM layer (OpenAI/Yandex/local stub), supports counts or ratios, deterministic with `seed`, validates grounding/deduplication.
   - `grader.py` — grades choice questions locally, open-ended via LLM rubric, partial credit for multiple choice.
   - `evaluator.py` — quality/consistency metrics, model comparison helpers.
   - `retriever.py` — placeholder RAG retriever (not wired into generation yet).
@@ -25,6 +25,7 @@ Consolidated description of the current solution (backend, REST API, evaluation 
   - `openai_client.py` — OpenAI API wrapper (question generation, answering, grading).
   - `yandex_client.py` — YandexGPT API wrapper (same capabilities as OpenAI).
   - `model_answer_tester.py` — Service for testing how well models answer exam questions.
+  - `llm_provider.py` — Provider factory and local stub for offline/testing.
 - `static/` — prebuilt frontend served from `/`.
 - `data/` — runtime root
   - `uploads/` — user Markdown uploads
@@ -40,7 +41,7 @@ Consolidated description of the current solution (backend, REST API, evaluation 
 ## REST API (current behavior)
 - `GET /health` → `{status, version}`.
 - `POST /api/generate`
-  - Body: `{"markdown_content": "...", "config": ExamConfig?}`. `ExamConfig` supports either explicit counts (`single_choice_count`, `multiple_choice_count`, `open_ended_count`) or ratios (`single_choice_ratio`, `multiple_choice_ratio`, `open_ended_ratio`) plus `total_questions`, `difficulty` (`easy|medium|hard|mixed`), `language` (`en|ru`), and optional `seed`.
+  - Body: `{"markdown_content": "...", "config": ExamConfig?}`. `ExamConfig` supports either explicit counts or ratios (missing `open_ended_ratio` auto-filled), plus `total_questions`, `difficulty` (`easy|medium|hard|mixed`), `language` (`en|ru`), `provider`, `model_name`, and optional `seed`.
   - Flow: parse Markdown → generate questions with OpenAI → save to `data/out/exam_<id>.json` → return `Exam`.
   - Errors: 400 on invalid input/config, 500 on generation failures.
 - `POST /api/grade`
@@ -49,7 +50,7 @@ Consolidated description of the current solution (backend, REST API, evaluation 
   - Errors: 404 if exam missing, 400 for invalid payload, 500 if grading fails.
 - `POST /api/upload` — accepts `.md` file, stores in `data/uploads/`, returns metadata; rejects non-Markdown.
 - `GET /api/files` — list uploaded Markdown files; `GET /api/files/{filename}` — read file contents.
-- `GET /api/exams` — list saved exams in `data/out/`; `GET /api/exams/{exam_id}` — return stored exam JSON.
+- `GET /api/exams` — list saved exams in `data/out/` with sorting/pagination; `GET /api/exams/{exam_id}` — return stored exam JSON.
 - Docs: Swagger at `/docs`, ReDoc at `/redoc`, OpenAPI at `/openapi.json`.
 
 ## Data Contracts (selected)

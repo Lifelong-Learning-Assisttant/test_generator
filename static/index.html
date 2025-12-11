@@ -113,6 +113,23 @@
         .card:hover { box-shadow: 0 5px 15px rgba(0,0,0,0.1); transform: translateY(-3px); }
         .card h3 { color: var(--blue); margin-bottom: 10px; }
         .card p { color: var(--muted); font-size: 14px; margin: 5px 0; }
+        .exam-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+        }
+        .exam-table th, .exam-table td {
+            padding: 10px;
+            border-bottom: 1px solid #e4e7ee;
+            text-align: left;
+        }
+        .exam-table th {
+            background: #f8fafc;
+            color: var(--muted);
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .exam-table tr:hover td { background: #f6f8fc; }
         .question {
             background: #f6f8fc;
             border-left: 4px solid var(--blue);
@@ -315,7 +332,25 @@
         <!-- Exams Tab -->
         <div id="exams-tab" class="tab-content">
             <h2>Generated Exams</h2>
-            <button class="btn" onclick="loadExams()">🔄 Refresh List</button>
+            <div style="display:flex; gap:10px; flex-wrap: wrap; align-items:center;">
+                <button class="btn" onclick="loadExams()">🔄 Refresh</button>
+                <label>Sort by:
+                    <select id="examSort" onchange="changeExamSort()" style="padding:8px; border-radius:6px; border:1px solid #ddd;">
+                        <option value="created">Date</option>
+                        <option value="size">Size</option>
+                        <option value="exam_id">Name</option>
+                    </select>
+                </label>
+                <label>Order:
+                    <select id="examOrder" onchange="changeExamSort()" style="padding:8px; border-radius:6px; border:1px solid #ddd;">
+                        <option value="desc">Desc</option>
+                        <option value="asc">Asc</option>
+                    </select>
+                </label>
+                <label>Page size:
+                    <input id="examPageSize" type="number" value="10" min="1" max="100" onchange="changeExamSort()" style="width:70px; padding:8px; border-radius:6px; border:1px solid #ddd;">
+                </label>
+            </div>
             <div class="card" style="margin: 16px 0;">
                 <h3>📥 Import Existing Exam</h3>
                 <p style="color: var(--muted); font-size: 14px;">Paste exam JSON to register it in storage.</p>
@@ -326,7 +361,12 @@
                 </div>
                 <div id="importResult"></div>
             </div>
-            <div id="examList" class="exam-list"></div>
+            <div id="examList"></div>
+            <div id="examPagination" style="margin-top:12px; display:flex; align-items:center; gap:10px;">
+                <button class="btn secondary" onclick="prevExamPage()">Prev</button>
+                <span id="examPageInfo" style="color: var(--muted);"></span>
+                <button class="btn secondary" onclick="nextExamPage()">Next</button>
+            </div>
         </div>
 
         <!-- Take Test Tab -->
@@ -347,6 +387,11 @@
     <script>
         const API_BASE = 'http://localhost:8000';
         let currentExam = null;
+        let examSort = 'created';
+        let examOrder = 'desc';
+        let examPage = 1;
+        let examPageSize = 10;
+        let examMeta = { total_pages: 1 };
 
         function switchTab(tabName) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -503,25 +548,40 @@
 
         async function loadExams() {
             try {
-                const response = await fetch(`${API_BASE}/api/exams`);
+                const response = await fetch(`${API_BASE}/api/exams?sort_by=${examSort}&order=${examOrder}&page=${examPage}&page_size=${examPageSize}`);
                 const data = await response.json();
+                examMeta = data;
                 const examList = document.getElementById('examList');
 
-                if (data.exams.length === 0) {
+                if (!data.exams || data.exams.length === 0) {
                     examList.innerHTML = '<p style="text-align: center; color: #666;">No exams generated yet</p>';
-                    return;
+                } else {
+                    examList.innerHTML = `
+                        <table class="exam-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Date</th>
+                                    <th>Size</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.exams.map(exam => `
+                                    <tr>
+                                        <td>${exam.exam_id}</td>
+                                        <td>${new Date(exam.created * 1000).toLocaleString()}</td>
+                                        <td>${(exam.size / 1024).toFixed(2)} KB</td>
+                                        <td><button class="btn secondary" onclick="viewExam('${exam.exam_id}')">View</button></td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
                 }
 
-                examList.innerHTML = data.exams.map(exam => `
-                    <div class="card">
-                        <h3>📝 ${exam.exam_id}</h3>
-                        <p>Created: ${new Date(exam.created * 1000).toLocaleString()}</p>
-                        <p>Size: ${(exam.size / 1024).toFixed(2)} KB</p>
-                        <button class="btn" onclick="viewExam('${exam.exam_id}')" style="width: 100%; margin-top: 10px;">
-                            👁️ View Details
-                        </button>
-                    </div>
-                `).join('');
+                const pageInfo = document.getElementById('examPageInfo');
+                pageInfo.textContent = `Page ${data.page} of ${data.total_pages} (${data.total} exams)`;
             } catch (error) {
                 console.error('Error loading exams:', error);
             }
@@ -555,7 +615,7 @@
 
         async function populateExamSelect() {
             try {
-                const response = await fetch(`${API_BASE}/api/exams`);
+                const response = await fetch(`${API_BASE}/api/exams?sort_by=created&order=desc&page=1&page_size=100`);
                 const data = await response.json();
                 const select = document.getElementById('examSelect');
 
@@ -796,3 +856,24 @@
     </script>
 </body>
 </html>
+        function changeExamSort() {
+            examSort = document.getElementById('examSort').value;
+            examOrder = document.getElementById('examOrder').value;
+            examPageSize = parseInt(document.getElementById('examPageSize').value) || 10;
+            examPage = 1;
+            loadExams();
+        }
+
+        function nextExamPage() {
+            if (examMeta && examPage < (examMeta.total_pages || 1)) {
+                examPage += 1;
+                loadExams();
+            }
+        }
+
+        function prevExamPage() {
+            if (examPage > 1) {
+                examPage -= 1;
+                loadExams();
+            }
+        }

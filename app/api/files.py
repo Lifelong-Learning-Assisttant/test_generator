@@ -4,7 +4,7 @@ File upload and management endpoints.
 import os
 from pathlib import Path
 from typing import List
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException, Query
 from fastapi.responses import JSONResponse
 from app.config import settings
 from app.utils.path import safe_join
@@ -118,7 +118,12 @@ async def get_file_content(filename: str):
 
 
 @router.get("/api/exams", tags=["exams"])
-async def list_exams():
+async def list_exams(
+    sort_by: str = Query("created", description="Sort by created|size|exam_id"),
+    order: str = Query("desc", description="Sort order asc|desc"),
+    page: int = Query(1, ge=1, description="Page number (1-based)"),
+    page_size: int = Query(10, ge=1, le=100, description="Items per page"),
+):
     """
     List all generated exams.
 
@@ -140,7 +145,31 @@ async def list_exams():
             "created": stat.st_mtime
         })
 
-    return {"exams": exams, "count": len(exams)}
+    sort_key_map = {
+        "created": lambda x: x["created"],
+        "size": lambda x: x["size"],
+        "exam_id": lambda x: x["exam_id"]
+    }
+    if sort_by not in sort_key_map:
+        raise HTTPException(status_code=400, detail="Invalid sort_by")
+
+    reverse = order.lower() == "desc"
+    exams = sorted(exams, key=sort_key_map[sort_by], reverse=reverse)
+
+    total = len(exams)
+    total_pages = (total + page_size - 1) // page_size if page_size else 1
+    start = (page - 1) * page_size
+    end = start + page_size
+    exams_page = exams[start:end]
+
+    return {
+        "exams": exams_page,
+        "count": len(exams_page),
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": total_pages
+    }
 
 
 @router.get("/api/exams/{exam_id}", tags=["exams"])
