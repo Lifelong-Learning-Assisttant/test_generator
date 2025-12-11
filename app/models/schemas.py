@@ -2,7 +2,7 @@
 Pydantic models for API contracts and data structures.
 """
 from typing import List, Literal, Optional, Dict, Any
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
 
 
 class SourceReference(BaseModel):
@@ -120,6 +120,7 @@ class ExamConfig(BaseModel):
     seed: Optional[int] = Field(None, description="Random seed for reproducibility")
     provider: Literal["openai", "yandex", "local"] = Field("openai", description="LLM provider for generation/grading")
     model_name: Optional[str] = Field(None, description="Specific model to use for the provider")
+    model_config = ConfigDict(protected_namespaces=())
 
     @model_validator(mode='after')
     def sync_counts_and_ratios(self) -> 'ExamConfig':
