@@ -154,10 +154,9 @@ comparison = compare_models(
 
 ## 📚 Documentation
 
-- **🚀 Quick Start:** core steps in this README; full guide at `docs/QUICK_START.md`
-- **📖 Architecture & API:** `docs/SOLUTION_OVERVIEW.md`
-- **📊 Evaluation workflows:** `docs/EVALUATION.md`
-- **🔧 Scripts reference:** `docs/SCRIPTS_GUIDE.md`
+- **📖 Architecture:** `docs/ARCHITECTURE.md`
+- **📌 Solution snapshot:** `docs/SOLUTION.md`
+- **🗺️ Plan (incl. evaluation):** `docs/PLAN.md`
 
 ## Notes
 - OpenAI or Yandex API key required depending on provider choice
