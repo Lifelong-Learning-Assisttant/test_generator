@@ -1,18 +1,19 @@
-import pytest
+import asyncio
 import json
 from pathlib import Path
-from fastapi.testclient import TestClient
 
-from app.main import app
+import pytest
+
+from app.api.import_exam import import_exam
 from app.config import settings
-
-pytestmark = pytest.mark.skip(reason="TestClient hangs in current sandbox; run locally.")
-
-client = TestClient(app)
+from app.models.schemas import Exam
 
 
-def sample_exam_payload():
-    return {
+@pytest.mark.asyncio
+async def test_import_exam_round_trip(tmp_path):
+    # Point outputs to temp dir
+    settings.output_dir = str(tmp_path)
+    payload = {
         "exam_id": "imported-1",
         "config_used": {"total_questions": 1},
         "questions": [
@@ -32,26 +33,13 @@ def sample_exam_payload():
         ],
     }
 
+    exam = Exam(**payload)
+    saved = await import_exam(exam)
+    assert saved.exam_id == exam.exam_id
 
-def test_import_exam_round_trip(tmp_path):
-    from app.config import settings
-
-    settings.output_dir = str(tmp_path)
-
-    payload = sample_exam_payload()
-    response = client.post("/api/exams/import", json=payload)
-    assert response.status_code == 200
-    data = response.json()
-    assert data["exam_id"] == payload["exam_id"]
-
-    # File should be written
     exam_file = Path(settings.output_dir) / f"exam_{payload['exam_id']}.json"
     assert exam_file.exists()
 
-    # Read back via API
-    get_resp = client.get(f"/api/exams/{payload['exam_id']}")
-    assert get_resp.status_code == 200
-    assert get_resp.json()["exam_id"] == payload["exam_id"]
-
-    # Cleanup
-    exam_file.unlink(missing_ok=True)
+    with open(exam_file, "r", encoding="utf-8") as f:
+        stored = json.load(f)
+    assert stored["exam_id"] == exam.exam_id
