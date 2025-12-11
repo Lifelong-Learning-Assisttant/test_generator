@@ -50,10 +50,11 @@ async def generate_exam(request: GenerateRequest):
             status_code=400,
             detail=f"Invalid input: {str(e)}"
         )
-    except RuntimeError:
+    except RuntimeError as e:
+        # Validation failures are now soft; unexpected RuntimeErrors are surfaced generically
         raise HTTPException(
             status_code=500,
-            detail="Generation failed validation. Please retry with more source content or different counts."
+            detail=f"Generation failed: {str(e)}"
         )
     except Exception as e:
         raise HTTPException(

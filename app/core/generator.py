@@ -26,7 +26,7 @@ class QuestionGenerator:
         llm_client: Optional[LLMProvider] = None,
         validator: Optional[QuestionValidator] = None,
         max_validation_attempts: int = 3,
-        strict_validation: bool = True
+        strict_validation: bool = False
     ):
         """Initialize generator with configurable LLM provider."""
         self.provider_name = provider or settings.default_provider
