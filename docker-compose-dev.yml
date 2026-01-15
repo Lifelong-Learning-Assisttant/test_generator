@@ -1,0 +1,20 @@
+version: "3.9"
+
+services:
+  api:
+    build: .
+    image: test-generator-api-dev
+    container_name: llm-tester-api-dev
+    env_file:
+      - .env
+    ports:
+      - "52812:8000"
+    volumes:
+      - ./data:/app/data
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    networks:
+      - test_generator_network_dev
+
+networks:
+  test_generator_network_dev:
+    driver: bridge

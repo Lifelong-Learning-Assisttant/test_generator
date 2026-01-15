@@ -1,0 +1,20 @@
+version: "3.9"
+
+services:
+  api:
+    image: ghcr.io/lifelong-learning-assisttant/test_generator:v001
+    container_name: llm-tester-api
+    env_file:
+      - .env
+    ports:
+      - "52812:8000"
+    volumes:
+      - ./data:/app/data
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    networks:
+      - test_generator_network
+
+networks:
+  test_generator_network:
+    name: test_generator_default
+    external: true
