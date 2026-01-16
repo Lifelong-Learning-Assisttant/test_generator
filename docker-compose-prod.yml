@@ -19,3 +19,4 @@ services:
 networks:
   test_generator_network:
     name: test_generator_default
+    external: true
