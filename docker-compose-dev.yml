@@ -4,7 +4,7 @@ services:
   api:
     build: .
     image: test-generator-api-dev
-    container_name: llm-tester-api-dev
+    container_name: test-generator-dev
     env_file:
       - .env
     ports:
